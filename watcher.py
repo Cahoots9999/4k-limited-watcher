@@ -15,13 +15,15 @@ from bs4 import BeautifulSoup
 # ============================================================
 
 USER_AGENT = (
-    "Mozilla/5.0 (compatible; 4K-Limited-Watcher/4.0)"
+    "Mozilla/5.0 (compatible; 4K-Limited-Watcher/4.1)"
 )
 
 DATA_FILE = Path("data/products.json")
 OUTPUT_DIR = Path("public")
 FEED_FILE = OUTPUT_DIR / "4k-limited.xml"
 
+# Ginza is intentionally left disabled for product parsing.
+# We will handle Ginza separately later.
 GINZA_URLS = [
     "https://www.ginza.se/Film/Kommande/4K/546",
 ]
@@ -38,14 +40,8 @@ FEED_RETENTION_DAYS = 180
 
 
 # ============================================================
-# IMPORTANT KEYWORDS
+# SPECIAL EDITION KEYWORDS
 # ============================================================
-
-# These indicate that the actual product is a special edition.
-#
-# "edition" by itself is NOT enough.
-# This prevents things such as "Nordic edition",
-# "Photocards edition", etc. from being accepted.
 
 SPECIAL_EDITION_KEYWORDS = [
     "limited edition",
@@ -54,22 +50,10 @@ SPECIAL_EDITION_KEYWORDS = [
     "collector's edition",
     "collectors edition",
     "collector edition",
-    "collectors",
-    "collector's",
     "deluxe limited edition",
     "deluxe edition",
     "limited mediabook",
     "mediabook",
-]
-
-# Optional extra wording which often occurs in actual
-# limited releases.
-SPECIAL_EDITION_PATTERNS = [
-    r"\blimited\b",
-    r"\bsteelbook\b",
-    r"\bcollector(?:'s|s)?\b",
-    r"\bmediabook\b",
-    r"\bdeluxe\b",
 ]
 
 
@@ -177,13 +161,6 @@ def save_state(state):
 # ============================================================
 
 def is_4k_text(text):
-    """
-    Detect explicit 4K/UHD wording.
-
-    We deliberately do NOT treat "Ultra HD" alone as enough
-    unless it appears in a product/media context.
-    """
-
     text = clean(text).lower()
 
     patterns = [
@@ -204,17 +181,14 @@ def is_4k_text(text):
 
 
 # ============================================================
-# EDITION DETECTION
+# SPECIAL EDITION DETECTION
 # ============================================================
 
 def is_special_edition(text):
     """
-    IMPORTANT:
-    This function is intentionally stricter than v3.
+    Strict edition detection.
 
-    "edition" by itself is NOT accepted.
-
-    Examples accepted:
+    Accepted examples:
         Limited Edition
         Limited Steelbook
         Steelbook
@@ -222,7 +196,7 @@ def is_special_edition(text):
         Deluxe Edition
         Mediabook
 
-    Examples rejected:
+    Rejected examples:
         Nordic edition
         Photocards edition
         Standard edition
@@ -231,25 +205,15 @@ def is_special_edition(text):
 
     text = clean(text).lower()
 
-    # Direct phrases first.
     for keyword in SPECIAL_EDITION_KEYWORDS:
         if keyword in text:
-            return True
-
-    # Then controlled regex patterns.
-    for pattern in SPECIAL_EDITION_PATTERNS:
-        if re.search(
-            pattern,
-            text,
-            re.IGNORECASE,
-        ):
             return True
 
     return False
 
 
 # ============================================================
-# PREORDER
+# PREORDER DETECTION
 # ============================================================
 
 def has_preorder(text):
@@ -270,27 +234,10 @@ def has_preorder(text):
 
 
 # ============================================================
-# PRODUCT TITLE EXTRACTION
+# PRODUCT TITLE
 # ============================================================
 
 def get_title_candidates(soup):
-    """
-    Return likely product-title strings.
-
-    iMusic sometimes presents the title in slightly different
-    ways, e.g.
-
-        Suspiria Limited Edition
-
-    or
-
-        4k Ultra Hd
-        Innerspace [limited Edition]
-
-    We therefore inspect metadata + headings instead of relying
-    on one single HTML element.
-    """
-
     candidates = []
 
     # OpenGraph title.
@@ -306,7 +253,7 @@ def get_title_candidates(soup):
             content = clean(
                 tag.get(
                     "content",
-                    ""
+                    "",
                 )
             )
 
@@ -315,10 +262,8 @@ def get_title_candidates(soup):
                     content
                 )
 
-    # H1 is usually the most important source.
-    for tag in soup.find_all(
-        "h1"
-    ):
+    # H1.
+    for tag in soup.find_all("h1"):
         text = clean(
             tag.get_text(
                 " ",
@@ -331,12 +276,10 @@ def get_title_candidates(soup):
                 text
             )
 
-    # H2/H3 can contain the actual product title
-    # on some iMusic pages.
+    # H2/H3 fallback.
     for tag in soup.find_all(
         ["h2", "h3"]
     ):
-
         text = clean(
             tag.get_text(
                 " ",
@@ -349,7 +292,7 @@ def get_title_candidates(soup):
                 text
             )
 
-    # Browser title as fallback.
+    # Browser title fallback.
     if soup.title:
         title = clean(
             soup.title.get_text()
@@ -360,7 +303,7 @@ def get_title_candidates(soup):
                 title
             )
 
-    # Remove duplicates while preserving order.
+    # Remove duplicates.
     unique = []
 
     for candidate in candidates:
@@ -372,14 +315,11 @@ def get_title_candidates(soup):
     return unique
 
 
-def find_special_edition_title(
-    soup
-):
+def find_special_edition_title(soup):
     """
-    Find a title which itself identifies the product as
-    a special/limited edition.
+    Find a title that itself indicates a special edition.
 
-    This is the key improvement over v3.
+    This is deliberately NOT based on the whole page.
     """
 
     candidates = get_title_candidates(
@@ -387,7 +327,6 @@ def find_special_edition_title(
     )
 
     for candidate in candidates:
-
         if is_special_edition(
             candidate
         ):
@@ -397,57 +336,44 @@ def find_special_edition_title(
 
 
 # ============================================================
-# MEDIA INFORMATION
+# MEDIA / FORMAT INFORMATION
 # ============================================================
 
 def find_media_text(soup):
-    """
-    Try to find the media/format section.
-
-    iMusic product pages normally contain text similar to:
-
-        Media | Film 4K Ultra HD
-        4K UHD Blu-ray
-
-    We use this as confirmation that the actual product
-    is 4K.
-    """
-
     media_parts = []
 
-    # Look for labels mentioning Media.
+    # Look for explicit "Media" labels.
     for element in soup.find_all(
         string=re.compile(
             r"^\s*Media\s*$",
             re.IGNORECASE,
         )
     ):
-
         parent = element.parent
 
         if parent:
-            parent_text = clean(
-                parent.parent.get_text(
-                    " ",
-                    strip=True,
+            if parent.parent:
+                parent_text = clean(
+                    parent.parent.get_text(
+                        " ",
+                        strip=True,
+                    )
                 )
-                if parent.parent
-                else parent.get_text(
-                    " ",
-                    strip=True,
+            else:
+                parent_text = clean(
+                    parent.get_text(
+                        " ",
+                        strip=True,
+                    )
                 )
-            )
 
             if parent_text:
                 media_parts.append(
                     parent_text
                 )
 
-    # Also inspect tables.
-    for row in soup.find_all(
-        "tr"
-    ):
-
+    # Inspect table rows.
+    for row in soup.find_all("tr"):
         row_text = clean(
             row.get_text(
                 " ",
@@ -455,12 +381,12 @@ def find_media_text(soup):
             )
         )
 
+        lower = row_text.lower()
+
         if (
-            "media" in row_text.lower()
-            or "4k ultra hd"
-            in row_text.lower()
-            or "4k uhd"
-            in row_text.lower()
+            "media" in lower
+            or "4k ultra hd" in lower
+            or "4k uhd" in lower
         ):
             media_parts.append(
                 row_text
@@ -477,37 +403,31 @@ def product_is_4k(
     url,
 ):
     """
-    4K must be confirmed by a product-level signal.
+    Confirm 4K at product level.
 
-    We accept:
-      - 4K in the actual product title
-      - 4K in the product URL/title metadata
-      - explicit 4K media information
-
-    We do NOT simply search the entire page for "4K",
-    because related products can contain 4K references.
+    We check:
+      1. Product title
+      2. Product URL
+      3. Media information
     """
 
     title_lower = title.lower()
     url_lower = url.lower()
 
-    # Strongest signal: actual title.
+    # Actual product title.
     if is_4k_text(
         title_lower
     ):
         return True
 
-    # URL generated by iMusic often contains the actual
-    # format, e.g. "...-4k-ultra-hd".
+    # iMusic URLs often contain this.
     if (
-        "4k-ultra-hd"
-        in url_lower
-        or "4k-uhd"
-        in url_lower
+        "4k-ultra-hd" in url_lower
+        or "4k-uhd" in url_lower
     ):
         return True
 
-    # Explicit Media field.
+    # Explicit media information.
     media_text = find_media_text(
         soup
     )
@@ -562,7 +482,6 @@ def parse_date(text):
                 int(match.group(3)),
                 tzinfo=timezone.utc,
             )
-
         except ValueError:
             pass
 
@@ -580,7 +499,6 @@ def parse_date(text):
                 int(match.group(1)),
                 tzinfo=timezone.utc,
             )
-
         except ValueError:
             pass
 
@@ -588,7 +506,7 @@ def parse_date(text):
         SWEDISH_MONTHS.keys()
     )
 
-    # 19 oktober 2026
+    # DD month YYYY
     match = re.search(
         rf"\b(\d{{1,2}})\s+({months})\s+(20\d{{2}})\b",
         text,
@@ -604,16 +522,13 @@ def parse_date(text):
                 int(match.group(1)),
                 tzinfo=timezone.utc,
             )
-
         except ValueError:
             pass
 
     return None
 
 
-def extract_release_date(
-    text
-):
+def extract_release_date(text):
     patterns = [
         r"releasedatum\s+(.{1,50})",
         r"release\s+date\s+(.{1,50})",
@@ -621,7 +536,6 @@ def extract_release_date(
     ]
 
     for pattern in patterns:
-
         match = re.search(
             pattern,
             text,
@@ -653,7 +567,6 @@ def extract_ean(text):
     ]
 
     for pattern in patterns:
-
         match = re.search(
             pattern,
             text,
@@ -673,7 +586,6 @@ def extract_price(text):
     ]
 
     for pattern in patterns:
-
         match = re.search(
             pattern,
             text,
@@ -692,20 +604,15 @@ def extract_price(text):
 # iMUSIC PRODUCT
 # ============================================================
 
-def looks_like_imusic_product(
-    url
-):
+def looks_like_imusic_product(url):
     return (
         "/movies/"
         in url.lower()
     )
 
 
-def parse_imusic_product(
-    url
-):
+def parse_imusic_product(url):
     try:
-
         html = get_html(
             url
         )
@@ -720,7 +627,7 @@ def parse_imusic_product(
         )
 
         # ----------------------------------------------------
-        # Find the actual edition title.
+        # 1. Find actual special-edition title.
         # ----------------------------------------------------
 
         product_title = (
@@ -729,14 +636,11 @@ def parse_imusic_product(
             )
         )
 
-        # If there is no limited/steelbook/etc. indication
-        # in the product title itself, reject it.
         if not product_title:
-
             return None
 
         # ----------------------------------------------------
-        # Confirm 4K at product level.
+        # 2. Confirm 4K at product level.
         # ----------------------------------------------------
 
         if not product_is_4k(
@@ -744,21 +648,19 @@ def parse_imusic_product(
             product_title,
             url,
         ):
-
             return None
 
         # ----------------------------------------------------
-        # Must currently be preorderable.
+        # 3. Must be preorderable.
         # ----------------------------------------------------
 
         if not has_preorder(
             page_text
         ):
-
             return None
 
         # ----------------------------------------------------
-        # Release date.
+        # 4. Release date.
         # ----------------------------------------------------
 
         release_date = (
@@ -767,9 +669,9 @@ def parse_imusic_product(
             )
         )
 
-        # Do not include already released products.
+        # If a release date is known and already passed,
+        # don't treat it as a current preorder.
         if release_date:
-
             today = datetime.now(
                 timezone.utc
             ).date()
@@ -778,11 +680,10 @@ def parse_imusic_product(
                 release_date.date()
                 < today
             ):
-
                 return None
 
         # ----------------------------------------------------
-        # Extract product information.
+        # 5. Create product object.
         # ----------------------------------------------------
 
         return {
@@ -821,20 +722,17 @@ def parse_imusic_product(
 # ============================================================
 
 def discover_imusic_urls():
-
     print("")
     print(
         "====== iMUSIC DISCOVERY ======"
     )
 
     try:
-
         html = get_html(
             IMUSIC_URL
         )
 
     except Exception as exc:
-
         print(
             f"iMusic catalogue failed: "
             f"{exc}"
@@ -853,7 +751,6 @@ def discover_imusic_urls():
         "a",
         href=True,
     ):
-
         href = anchor.get(
             "href"
         )
@@ -893,17 +790,13 @@ def discover_imusic_urls():
 # iMUSIC PARALLEL CHECK
 # ============================================================
 
-def parse_imusic(
-    urls
-):
-
+def parse_imusic(urls):
     print("")
     print(
         "======== iMUSIC CHECK ========"
     )
 
     results = []
-
     completed = 0
 
     with ThreadPoolExecutor(
@@ -921,23 +814,19 @@ def parse_imusic(
         for future in as_completed(
             futures
         ):
-
             completed += 1
 
             try:
-
                 product = (
                     future.result()
                 )
 
                 if product:
-
                     results.append(
                         product
                     )
 
             except Exception as exc:
-
                 print(
                     f"iMusic product error: "
                     f"{exc}"
@@ -945,21 +834,18 @@ def parse_imusic(
 
             if (
                 completed % 25 == 0
-                or completed
-                == len(futures)
+                or completed == len(futures)
             ):
-
                 print(
                     f"iMusic checked "
                     f"{completed}/"
                     f"{len(futures)}"
                 )
 
-    # Remove duplicates.
+    # Remove duplicate products.
     unique = {}
 
     for product in results:
-
         pid = product_id(
             product
         )
@@ -983,7 +869,6 @@ def parse_imusic(
 # ============================================================
 
 def fetch_ginza():
-
     print("")
     print(
         "========== GINZA =========="
@@ -995,9 +880,7 @@ def fetch_ginza():
             1,
             GINZA_RETRIES + 1,
         ):
-
             try:
-
                 print(
                     f"Ginza: trying "
                     f"{url} "
@@ -1015,7 +898,6 @@ def fetch_ginza():
                 return html
 
             except Exception as exc:
-
                 print(
                     f"Ginza attempt "
                     f"{attempt} failed: "
@@ -1026,10 +908,7 @@ def fetch_ginza():
                     attempt
                     < GINZA_RETRIES
                 ):
-
-                    time.sleep(
-                        2
-                    )
+                    time.sleep(2)
 
     print(
         "Ginza: unable to download "
@@ -1040,11 +919,9 @@ def fetch_ginza():
 
 
 def parse_ginza():
-
     html = fetch_ginza()
 
     if not html:
-
         print(
             "Ginza: 0 products "
             "(site unreachable)."
@@ -1052,10 +929,7 @@ def parse_ginza():
 
         return []
 
-    # Ginza is deliberately left as-is for now.
-    # We will improve this separately once GitHub Actions
-    # can actually reach the site.
-
+    # Ginza is intentionally not parsed yet.
     print(
         "Ginza parser skipped for now."
     )
@@ -1067,16 +941,12 @@ def parse_ginza():
 # DATABASE
 # ============================================================
 
-def product_id(
-    product
-):
-
+def product_id(product):
     ean = product.get(
         "ean"
     )
 
     if ean:
-
         return (
             f"{product['source']}:"
             f"{ean}"
@@ -1098,23 +968,23 @@ def merge_products(
 
     new_items = []
 
-    # IDs for products that are valid RIGHT NOW.
+    # Products that currently match the filters.
     current_ids = set()
 
     for product in discovered:
-
         pid = product_id(
             product
         )
 
-        current_ids.add(pid)
+        current_ids.add(
+            pid
+        )
 
         # ----------------------------------------------------
-        # New product
+        # NEW PRODUCT
         # ----------------------------------------------------
 
         if pid not in state:
-
             product[
                 "first_seen"
             ] = now
@@ -1133,7 +1003,7 @@ def merge_products(
                 product
             )
 
-           print(
+            print(
                 f"NEW: "
                 f"{product['source']} - "
                 f"{product['title']}"
@@ -1147,7 +1017,7 @@ def merge_products(
             continue
 
         # ----------------------------------------------------
-        # Existing product
+        # EXISTING PRODUCT
         # ----------------------------------------------------
 
         old = state[pid]
@@ -1180,16 +1050,17 @@ def merge_products(
             "first_seen"
         ] = first_seen
 
+        # It currently matches, therefore it should
+        # be visible in RSS.
         old[
             "published"
         ] = True
 
-        # Product became preorderable.
+        # Product became preorderable again.
         if (
             not old_preorder
             and new_preorder
         ):
-
             old[
                 "preorder_first_seen"
             ] = (
@@ -1207,37 +1078,33 @@ def merge_products(
                 f"{old['title']}"
             )
 
-        # Show every current match.
         print(
             f"MATCH: "
             f"{old['title']}"
         )
 
     # --------------------------------------------------------
-    # Unpublish products that no longer match.
-    #
-    # IMPORTANT:
-    # We only do this for iMusic.
-    # Ginza is being handled separately.
+    # UNPUBLISH OLD iMUSIC PRODUCTS
     # --------------------------------------------------------
 
     unpublished = 0
 
     for pid, product in state.items():
 
+        # Only modify iMusic here.
         if product.get(
             "source"
         ) != "iMusic":
-
             continue
 
+        # If it wasn't found in the current scan,
+        # it no longer passes our filters.
         if pid not in current_ids:
 
             if product.get(
                 "published",
                 True,
             ):
-
                 product[
                     "published"
                 ] = False
@@ -1250,10 +1117,9 @@ def merge_products(
                 )
 
     if unpublished:
-
         print(
-            f"Products removed from "
-            f"RSS: {unpublished}"
+            f"Products removed from RSS: "
+            f"{unpublished}"
         )
 
     return (
@@ -1266,10 +1132,7 @@ def merge_products(
 # RSS
 # ============================================================
 
-def xml_escape(
-    text
-):
-
+def xml_escape(text):
     return (
         str(text)
         .replace(
@@ -1295,10 +1158,7 @@ def xml_escape(
     )
 
 
-def make_description(
-    product
-):
-
+def make_description(product):
     source = xml_escape(
         product.get(
             "source",
@@ -1333,10 +1193,7 @@ def make_description(
     )
 
 
-def make_feed(
-    state
-):
-
+def make_feed(state):
     OUTPUT_DIR.mkdir(
         parents=True,
         exist_ok=True,
@@ -1354,18 +1211,17 @@ def make_feed(
 
     for product in state.values():
 
+        # Only currently published products.
         if not product.get(
-            "published"
+            "published",
+            False,
         ):
-
             continue
 
         # Only iMusic for now.
-        # Ginza will be added later.
         if product.get(
             "source"
         ) != "iMusic":
-
             continue
 
         timestamp = (
@@ -1381,7 +1237,6 @@ def make_feed(
             continue
 
         try:
-
             dt = datetime.fromisoformat(
                 timestamp.replace(
                     "Z",
@@ -1396,7 +1251,6 @@ def make_feed(
             dt.timestamp()
             >= cutoff
         ):
-
             items.append(
                 (
                     dt,
@@ -1504,7 +1358,7 @@ def make_feed(
                 (
                     "<pubDate>"
                     f"{pub_date}"
-                    "</pubDate>"
+                    f"</pubDate>"
                 ),
                 "</item>",
             ]
@@ -1525,8 +1379,7 @@ def make_feed(
     )
 
     print(
-        f"RSS items: "
-        f"{len(items)}"
+        f"RSS items: {len(items)}"
     )
 
 
@@ -1535,13 +1388,12 @@ def make_feed(
 # ============================================================
 
 def main():
-
     print("")
     print(
         "=" * 60
     )
     print(
-        "4K LIMITED EDITION WATCHER v4"
+        "4K LIMITED EDITION WATCHER v4.1"
     )
     print(
         "=" * 60
@@ -1555,15 +1407,14 @@ def main():
     )
 
     # --------------------------------------------------------
-    # Ginza
+    # GINZA
     # --------------------------------------------------------
 
-    # We still attempt Ginza so we can see if access starts
-    # working, but it does not affect the iMusic watcher.
+    # Still tested, but intentionally not parsed.
     parse_ginza()
 
     # --------------------------------------------------------
-    # iMusic
+    # iMUSIC
     # --------------------------------------------------------
 
     imusic_urls = (
@@ -1577,12 +1428,10 @@ def main():
     )
 
     # --------------------------------------------------------
-    # Merge
+    # MERGE
     # --------------------------------------------------------
 
-    discovered = (
-        imusic_products
-    )
+    discovered = imusic_products
 
     print("")
     print(
@@ -1598,7 +1447,7 @@ def main():
     )
 
     # --------------------------------------------------------
-    # Save
+    # SAVE
     # --------------------------------------------------------
 
     save_state(
@@ -1609,18 +1458,25 @@ def main():
         state
     )
 
+    # --------------------------------------------------------
+    # SUMMARY
+    # --------------------------------------------------------
+
     print("")
     print(
         "=" * 60
     )
+
     print(
         f"New items this run: "
         f"{len(new_items)}"
     )
+
     print(
         f"Database size: "
         f"{len(state)}"
     )
+
     print(
         "=" * 60
     )
