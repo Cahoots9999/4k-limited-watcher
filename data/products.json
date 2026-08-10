@@ -13,7 +13,7 @@
     "is_preorder": true,
     "last_seen": "2026-08-10T14:10:56.499455+00:00",
     "preorder_first_seen": "2026-08-10T14:11:03.393920+00:00",
-    "published": true
+    "published": false
   },
   "iMusic:5705535072236": {
     "source": "iMusic",
@@ -29,7 +29,7 @@
     "is_preorder": true,
     "last_seen": "2026-08-10T14:10:54.474950+00:00",
     "preorder_first_seen": "2026-08-10T14:11:03.393920+00:00",
-    "published": true
+    "published": false
   },
   "iMusic:7333018038196": {
     "source": "iMusic",
@@ -45,7 +45,7 @@
     "is_preorder": true,
     "last_seen": "2026-08-10T14:11:03.392878+00:00",
     "preorder_first_seen": "2026-08-10T14:11:03.393920+00:00",
-    "published": true
+    "published": false
   },
   "iMusic:7333018038189": {
     "source": "iMusic",
@@ -60,7 +60,7 @@
     "is_limited": true,
     "is_preorder": true,
     "last_seen": "2026-08-10T14:10:55.302741+00:00",
-    "published": true,
+    "published": false,
     "preorder_first_seen": "2026-08-10T14:04:20.514123+00:00"
   },
   "iMusic:7333018038202": {
@@ -76,7 +76,7 @@
     "is_limited": true,
     "is_preorder": true,
     "last_seen": "2026-08-10T14:10:52.937551+00:00",
-    "published": true,
+    "published": false,
     "preorder_first_seen": "2026-08-10T14:04:20.514123+00:00"
   },
   "iMusic:7333018038165": {
@@ -91,7 +91,7 @@
     "is_4k": true,
     "is_limited": true,
     "is_preorder": true,
-    "last_seen": "2026-08-10T14:18:46.260849+00:00",
+    "last_seen": "2026-08-10T14:32:56.338451+00:00",
     "preorder_first_seen": "2026-08-10T14:11:03.393920+00:00",
     "published": true
   },
@@ -109,7 +109,7 @@
     "is_preorder": true,
     "last_seen": "2026-08-10T14:11:02.127539+00:00",
     "preorder_first_seen": "2026-08-10T14:11:03.393920+00:00",
-    "published": true
+    "published": false
   },
   "iMusic:5709165919220": {
     "source": "iMusic",
@@ -124,7 +124,7 @@
     "is_limited": true,
     "is_preorder": true,
     "last_seen": "2026-08-10T14:10:52.293821+00:00",
-    "published": true,
+    "published": false,
     "preorder_first_seen": "2026-08-10T14:04:20.514123+00:00"
   },
   "iMusic:5709165679322": {
@@ -140,7 +140,7 @@
     "is_limited": true,
     "is_preorder": true,
     "last_seen": "2026-08-10T14:10:59.670341+00:00",
-    "published": true,
+    "published": false,
     "preorder_first_seen": "2026-08-10T14:04:20.514123+00:00"
   },
   "iMusic:5709165909221": {
@@ -156,7 +156,7 @@
     "is_limited": true,
     "is_preorder": true,
     "last_seen": "2026-08-10T14:10:59.241844+00:00",
-    "published": true,
+    "published": false,
     "preorder_first_seen": "2026-08-10T14:04:20.514123+00:00"
   },
   "iMusic:0602465724479": {
@@ -173,7 +173,7 @@
     "is_preorder": true,
     "last_seen": "2026-08-10T14:10:59.454766+00:00",
     "preorder_first_seen": "2026-08-10T14:11:03.393920+00:00",
-    "published": true
+    "published": false
   },
   "iMusic:3701432065847": {
     "source": "iMusic",
@@ -183,7 +183,8 @@
     "release_date": "11 februari 2026",
     "price": "259 kr",
     "description": "",
-    "first_seen": "2026-08-10T13:49:36.937337+00:00"
+    "first_seen": "2026-08-10T13:49:36.937337+00:00",
+    "published": false
   },
   "iMusic:3701432063294": {
     "source": "iMusic",
@@ -193,7 +194,8 @@
     "release_date": "21 augusti 2025",
     "price": "319 kr",
     "description": "",
-    "first_seen": "2026-08-10T13:49:36.937337+00:00"
+    "first_seen": "2026-08-10T13:49:36.937337+00:00",
+    "published": false
   },
   "iMusic:5027035030357": {
     "source": "iMusic",
@@ -203,7 +205,8 @@
     "release_date": "20 juli 2026",
     "price": "479 kr",
     "description": "",
-    "first_seen": "2026-08-10T13:49:36.937337+00:00"
+    "first_seen": "2026-08-10T13:49:36.937337+00:00",
+    "published": false
   },
   "iMusic:5027035030524": {
     "source": "iMusic",
@@ -213,7 +216,8 @@
     "release_date": "3 augusti 2026",
     "price": "369 kr",
     "description": "",
-    "first_seen": "2026-08-10T13:49:36.937337+00:00"
+    "first_seen": "2026-08-10T13:49:36.937337+00:00",
+    "published": false
   },
   "iMusic:5061088923952": {
     "source": "iMusic",
@@ -229,7 +233,7 @@
     "is_preorder": true,
     "last_seen": "2026-08-10T14:10:50.916230+00:00",
     "preorder_first_seen": "2026-08-10T14:11:03.393920+00:00",
-    "published": true
+    "published": false
   },
   "iMusic:5061088923945": {
     "source": "iMusic",
@@ -245,7 +249,7 @@
     "is_preorder": true,
     "last_seen": "2026-08-10T14:11:01.466949+00:00",
     "preorder_first_seen": "2026-08-10T14:11:03.393920+00:00",
-    "published": true
+    "published": false
   },
   "iMusic:5027035029566": {
     "source": "iMusic",
@@ -255,7 +259,8 @@
     "release_date": "5 januari 2026",
     "price": "259 kr",
     "description": "",
-    "first_seen": "2026-08-10T13:49:36.937337+00:00"
+    "first_seen": "2026-08-10T13:49:36.937337+00:00",
+    "published": false
   },
   "iMusic:5027035027876": {
     "source": "iMusic",
@@ -265,7 +270,8 @@
     "release_date": "30 mars 2026",
     "price": "539 kr",
     "description": "",
-    "first_seen": "2026-08-10T13:49:36.937337+00:00"
+    "first_seen": "2026-08-10T13:49:36.937337+00:00",
+    "published": false
   },
   "iMusic:5028836042990": {
     "source": "iMusic",
@@ -279,7 +285,7 @@
     "is_4k": true,
     "is_limited": true,
     "is_preorder": true,
-    "last_seen": "2026-08-10T14:18:43.860498+00:00",
+    "last_seen": "2026-08-10T14:32:51.042657+00:00",
     "published": true,
     "preorder_first_seen": "2026-08-10T14:04:20.514123+00:00"
   },
@@ -291,7 +297,8 @@
     "release_date": "15 december 2025",
     "price": "7 kr",
     "description": "",
-    "first_seen": "2026-08-10T13:49:36.937337+00:00"
+    "first_seen": "2026-08-10T13:49:36.937337+00:00",
+    "published": false
   },
   "iMusic:5708758727334": {
     "source": "iMusic",
@@ -301,7 +308,8 @@
     "release_date": "12 januari 2026",
     "price": "7 kr",
     "description": "",
-    "first_seen": "2026-08-10T13:49:36.937337+00:00"
+    "first_seen": "2026-08-10T13:49:36.937337+00:00",
+    "published": false
   },
   "iMusic:5708758727297": {
     "source": "iMusic",
@@ -311,7 +319,8 @@
     "release_date": "8 december 2025",
     "price": "149 kr",
     "description": "",
-    "first_seen": "2026-08-10T13:49:36.937337+00:00"
+    "first_seen": "2026-08-10T13:49:36.937337+00:00",
+    "published": false
   },
   "iMusic:5027035029276": {
     "source": "iMusic",
@@ -321,7 +330,8 @@
     "release_date": "10 november 2025",
     "price": "569 kr",
     "description": "",
-    "first_seen": "2026-08-10T13:49:36.937337+00:00"
+    "first_seen": "2026-08-10T13:49:36.937337+00:00",
+    "published": false
   },
   "iMusic:7333018035188": {
     "source": "iMusic",
@@ -331,7 +341,8 @@
     "release_date": "11 augusti 2025",
     "price": "339 kr",
     "description": "",
-    "first_seen": "2026-08-10T13:49:36.937337+00:00"
+    "first_seen": "2026-08-10T13:49:36.937337+00:00",
+    "published": false
   },
   "iMusic:5027035023137": {
     "source": "iMusic",
@@ -341,7 +352,8 @@
     "release_date": "5 april 2021",
     "price": "349 kr",
     "description": "",
-    "first_seen": "2026-08-10T13:49:36.937337+00:00"
+    "first_seen": "2026-08-10T13:49:36.937337+00:00",
+    "published": false
   },
   "iMusic:5027035025308": {
     "source": "iMusic",
@@ -351,7 +363,8 @@
     "release_date": "19 juni 2023",
     "price": "339 kr",
     "description": "",
-    "first_seen": "2026-08-10T13:49:36.937337+00:00"
+    "first_seen": "2026-08-10T13:49:36.937337+00:00",
+    "published": false
   },
   "iMusic:5060952898549": {
     "source": "iMusic",
@@ -361,7 +374,8 @@
     "release_date": "28 april 2025",
     "price": "379 kr",
     "description": "",
-    "first_seen": "2026-08-10T13:49:36.937337+00:00"
+    "first_seen": "2026-08-10T13:49:36.937337+00:00",
+    "published": false
   },
   "iMusic:5060710975949": {
     "source": "iMusic",
@@ -375,7 +389,7 @@
     "is_4k": true,
     "is_limited": true,
     "is_preorder": true,
-    "last_seen": "2026-08-10T14:18:44.877464+00:00",
+    "last_seen": "2026-08-10T14:32:51.476507+00:00",
     "preorder_first_seen": "2026-08-10T14:11:03.393920+00:00",
     "published": true
   },
@@ -391,7 +405,7 @@
     "is_4k": true,
     "is_limited": true,
     "is_preorder": true,
-    "last_seen": "2026-08-10T14:18:40.369943+00:00",
+    "last_seen": "2026-08-10T14:33:01.888602+00:00",
     "preorder_first_seen": "2026-08-10T14:11:03.393920+00:00",
     "published": true
   },
@@ -409,7 +423,7 @@
     "is_preorder": true,
     "last_seen": "2026-08-10T14:10:54.294270+00:00",
     "preorder_first_seen": "2026-08-10T14:11:03.393920+00:00",
-    "published": true
+    "published": false
   },
   "iMusic:5055201855787": {
     "source": "iMusic",
@@ -424,7 +438,7 @@
     "is_limited": true,
     "is_preorder": true,
     "last_seen": "2026-08-10T14:10:52.966790+00:00",
-    "published": true,
+    "published": false,
     "preorder_first_seen": "2026-08-10T14:04:20.514123+00:00"
   },
   "iMusic:5021866021515": {
@@ -441,7 +455,7 @@
     "is_preorder": true,
     "last_seen": "2026-08-10T14:10:57.477810+00:00",
     "preorder_first_seen": "2026-08-10T14:11:03.393920+00:00",
-    "published": true
+    "published": false
   },
   "iMusic:5021866006529": {
     "source": "iMusic",
@@ -457,7 +471,7 @@
     "is_preorder": true,
     "last_seen": "2026-08-10T14:10:51.512219+00:00",
     "preorder_first_seen": "2026-08-10T14:11:03.393920+00:00",
-    "published": true
+    "published": false
   },
   "iMusic:5021866056517": {
     "source": "iMusic",
@@ -473,7 +487,7 @@
     "is_preorder": true,
     "last_seen": "2026-08-10T14:10:54.941285+00:00",
     "preorder_first_seen": "2026-08-10T14:11:03.393920+00:00",
-    "published": true
+    "published": false
   },
   "iMusic:5056453209151": {
     "source": "iMusic",
@@ -481,13 +495,13 @@
     "url": "https://imusic.se/movies/5056453209151/phillip-noyce-2026-clear-and-present-danger-4k-ultra-hd",
     "ean": "5056453209151",
     "release_date": "2026-08-10",
-    "price": "469 kr",
+    "price": "4 kr",
     "description": "",
     "first_seen": "2026-08-10T13:49:36.937337+00:00",
     "is_4k": true,
     "is_limited": true,
     "is_preorder": true,
-    "last_seen": "2026-08-10T14:18:40.807665+00:00",
+    "last_seen": "2026-08-10T14:33:01.900551+00:00",
     "published": true,
     "preorder_first_seen": "2026-08-10T14:04:20.514123+00:00"
   },
@@ -497,13 +511,13 @@
     "url": "https://imusic.se/movies/5056453209144/martin-brest-2026-beverly-hills-cop-4k-ultra-hd",
     "ean": "5056453209144",
     "release_date": "2026-08-10",
-    "price": "7 kr",
+    "price": "469 kr",
     "description": "",
     "first_seen": "2026-08-10T13:49:36.937337+00:00",
     "is_4k": true,
     "is_limited": true,
     "is_preorder": true,
-    "last_seen": "2026-08-10T14:18:40.821385+00:00",
+    "last_seen": "2026-08-10T14:33:02.511186+00:00",
     "preorder_first_seen": "2026-08-10T14:11:03.393920+00:00",
     "published": true
   },
@@ -515,7 +529,8 @@
     "release_date": "27 september 2021",
     "price": "259 kr",
     "description": "",
-    "first_seen": "2026-08-10T13:49:36.937337+00:00"
+    "first_seen": "2026-08-10T13:49:36.937337+00:00",
+    "published": false
   },
   "iMusic:5022366807340": {
     "source": "iMusic",
@@ -525,7 +540,8 @@
     "release_date": "24 juli 2017",
     "price": "589 kr",
     "description": "",
-    "first_seen": "2026-08-10T13:49:36.937337+00:00"
+    "first_seen": "2026-08-10T13:49:36.937337+00:00",
+    "published": false
   },
   "iMusic:5022366022347": {
     "source": "iMusic",
@@ -535,7 +551,8 @@
     "release_date": "17 november 2025",
     "price": "369 kr",
     "description": "",
-    "first_seen": "2026-08-10T13:49:36.937337+00:00"
+    "first_seen": "2026-08-10T13:49:36.937337+00:00",
+    "published": false
   },
   "iMusic:5022366018142": {
     "source": "iMusic",
@@ -545,7 +562,8 @@
     "release_date": "27 januari 2025",
     "price": "349 kr",
     "description": "",
-    "first_seen": "2026-08-10T13:49:36.937337+00:00"
+    "first_seen": "2026-08-10T13:49:36.937337+00:00",
+    "published": false
   },
   "iMusic:5033266005248": {
     "source": "iMusic",
@@ -555,7 +573,8 @@
     "release_date": "1 april 2024",
     "price": "189 kr",
     "description": "",
-    "first_seen": "2026-08-10T13:49:36.937337+00:00"
+    "first_seen": "2026-08-10T13:49:36.937337+00:00",
+    "published": false
   },
   "iMusic:5022366813549": {
     "source": "iMusic",
@@ -565,7 +584,8 @@
     "release_date": "30 juni 2014",
     "price": "259 kr",
     "description": "",
-    "first_seen": "2026-08-10T13:49:36.937337+00:00"
+    "first_seen": "2026-08-10T13:49:36.937337+00:00",
+    "published": false
   },
   "iMusic:5022366610049": {
     "source": "iMusic",
@@ -575,7 +595,8 @@
     "release_date": "15 juli 2019",
     "price": "439 kr",
     "description": "",
-    "first_seen": "2026-08-10T13:49:36.937337+00:00"
+    "first_seen": "2026-08-10T13:49:36.937337+00:00",
+    "published": false
   },
   "iMusic:7333018038844": {
     "source": "iMusic",
@@ -589,7 +610,7 @@
     "is_preorder": true,
     "last_seen": "2026-08-10T14:00:31.874667+00:00",
     "first_seen": "2026-08-10T14:04:20.514123+00:00",
-    "published": true,
+    "published": false,
     "preorder_first_seen": "2026-08-10T14:04:20.514123+00:00"
   },
   "iMusic:7333018038561": {
@@ -604,7 +625,7 @@
     "is_preorder": true,
     "last_seen": "2026-08-10T14:00:33.664299+00:00",
     "first_seen": "2026-08-10T14:04:20.514123+00:00",
-    "published": true,
+    "published": false,
     "preorder_first_seen": "2026-08-10T14:04:20.514123+00:00"
   },
   "iMusic:5712976004917": {
@@ -619,7 +640,7 @@
     "is_preorder": true,
     "last_seen": "2026-08-10T14:00:45.681073+00:00",
     "first_seen": "2026-08-10T14:04:20.514123+00:00",
-    "published": true,
+    "published": false,
     "preorder_first_seen": "2026-08-10T14:04:20.514123+00:00"
   },
   "iMusic:7333018038851": {
@@ -634,7 +655,7 @@
     "is_preorder": true,
     "last_seen": "2026-08-10T14:00:49.535216+00:00",
     "first_seen": "2026-08-10T14:04:20.514123+00:00",
-    "published": true,
+    "published": false,
     "preorder_first_seen": "2026-08-10T14:04:20.514123+00:00"
   },
   "iMusic:5061088922696": {
@@ -649,7 +670,7 @@
     "is_preorder": true,
     "last_seen": "2026-08-10T14:01:12.085174+00:00",
     "first_seen": "2026-08-10T14:04:20.514123+00:00",
-    "published": true,
+    "published": false,
     "preorder_first_seen": "2026-08-10T14:04:20.514123+00:00"
   },
   "iMusic:5060710976441": {
@@ -664,7 +685,7 @@
     "is_preorder": true,
     "last_seen": "2026-08-10T14:01:36.009660+00:00",
     "first_seen": "2026-08-10T14:04:20.514123+00:00",
-    "published": true,
+    "published": false,
     "preorder_first_seen": "2026-08-10T14:04:20.514123+00:00"
   },
   "iMusic:5037899008485": {
@@ -679,7 +700,7 @@
     "is_preorder": true,
     "last_seen": "2026-08-10T14:01:39.885913+00:00",
     "first_seen": "2026-08-10T14:04:20.514123+00:00",
-    "published": true,
+    "published": false,
     "preorder_first_seen": "2026-08-10T14:04:20.514123+00:00"
   },
   "iMusic:7333018038813": {
@@ -694,7 +715,7 @@
     "is_preorder": true,
     "last_seen": "2026-08-10T14:01:41.603707+00:00",
     "first_seen": "2026-08-10T14:04:20.514123+00:00",
-    "published": true,
+    "published": false,
     "preorder_first_seen": "2026-08-10T14:04:20.514123+00:00"
   },
   "iMusic:5061088922429": {
@@ -709,7 +730,7 @@
     "is_preorder": true,
     "last_seen": "2026-08-10T14:01:55.634565+00:00",
     "first_seen": "2026-08-10T14:04:20.514123+00:00",
-    "published": true,
+    "published": false,
     "preorder_first_seen": "2026-08-10T14:04:20.514123+00:00"
   },
   "iMusic:7333018038356": {
@@ -724,7 +745,7 @@
     "is_preorder": true,
     "last_seen": "2026-08-10T14:02:03.428588+00:00",
     "first_seen": "2026-08-10T14:04:20.514123+00:00",
-    "published": true,
+    "published": false,
     "preorder_first_seen": "2026-08-10T14:04:20.514123+00:00"
   },
   "iMusic:0843501636848": {
@@ -739,7 +760,7 @@
     "is_preorder": true,
     "last_seen": "2026-08-10T14:02:07.240010+00:00",
     "first_seen": "2026-08-10T14:04:20.514123+00:00",
-    "published": true,
+    "published": false,
     "preorder_first_seen": "2026-08-10T14:04:20.514123+00:00"
   },
   "iMusic:7333018038912": {
@@ -754,7 +775,7 @@
     "is_preorder": true,
     "last_seen": "2026-08-10T14:02:09.030425+00:00",
     "first_seen": "2026-08-10T14:04:20.514123+00:00",
-    "published": true,
+    "published": false,
     "preorder_first_seen": "2026-08-10T14:04:20.514123+00:00"
   },
   "iMusic:7333018038295": {
@@ -769,7 +790,7 @@
     "is_preorder": true,
     "last_seen": "2026-08-10T14:02:25.725573+00:00",
     "first_seen": "2026-08-10T14:04:20.514123+00:00",
-    "published": true,
+    "published": false,
     "preorder_first_seen": "2026-08-10T14:04:20.514123+00:00"
   },
   "iMusic:0738329273965": {
@@ -784,7 +805,7 @@
     "is_preorder": true,
     "last_seen": "2026-08-10T14:02:31.366629+00:00",
     "first_seen": "2026-08-10T14:04:20.514123+00:00",
-    "published": true,
+    "published": false,
     "preorder_first_seen": "2026-08-10T14:04:20.514123+00:00"
   },
   "iMusic:0760137193623": {
@@ -799,7 +820,7 @@
     "is_preorder": true,
     "last_seen": "2026-08-10T14:02:33.077684+00:00",
     "first_seen": "2026-08-10T14:04:20.514123+00:00",
-    "published": true,
+    "published": false,
     "preorder_first_seen": "2026-08-10T14:04:20.514123+00:00"
   },
   "iMusic:7333018038363": {
@@ -814,7 +835,7 @@
     "is_preorder": true,
     "last_seen": "2026-08-10T14:03:22.491850+00:00",
     "first_seen": "2026-08-10T14:04:20.514123+00:00",
-    "published": true,
+    "published": false,
     "preorder_first_seen": "2026-08-10T14:04:20.514123+00:00"
   },
   "iMusic:0760137216476": {
@@ -829,7 +850,7 @@
     "is_preorder": true,
     "last_seen": "2026-08-10T14:03:24.308761+00:00",
     "first_seen": "2026-08-10T14:04:20.514123+00:00",
-    "published": true,
+    "published": false,
     "preorder_first_seen": "2026-08-10T14:04:20.514123+00:00"
   },
   "iMusic:5037899094501": {
@@ -844,7 +865,7 @@
     "is_preorder": true,
     "last_seen": "2026-08-10T14:03:33.237725+00:00",
     "first_seen": "2026-08-10T14:04:20.514123+00:00",
-    "published": true,
+    "published": false,
     "preorder_first_seen": "2026-08-10T14:04:20.514123+00:00"
   },
   "iMusic:5060974683468": {
@@ -859,7 +880,7 @@
     "is_preorder": true,
     "last_seen": "2026-08-10T14:03:36.692055+00:00",
     "first_seen": "2026-08-10T14:04:20.514123+00:00",
-    "published": true,
+    "published": false,
     "preorder_first_seen": "2026-08-10T14:04:20.514123+00:00"
   },
   "iMusic:7333018034525": {
@@ -874,7 +895,7 @@
     "is_preorder": true,
     "last_seen": "2026-08-10T14:03:43.016007+00:00",
     "first_seen": "2026-08-10T14:04:20.514123+00:00",
-    "published": true,
+    "published": false,
     "preorder_first_seen": "2026-08-10T14:04:20.514123+00:00"
   },
   "iMusic:5060162238036": {
@@ -889,7 +910,7 @@
     "is_preorder": true,
     "last_seen": "2026-08-10T14:03:54.632629+00:00",
     "first_seen": "2026-08-10T14:04:20.514123+00:00",
-    "published": true,
+    "published": false,
     "preorder_first_seen": "2026-08-10T14:04:20.514123+00:00"
   },
   "iMusic:0843501641002": {
@@ -904,7 +925,7 @@
     "is_preorder": true,
     "last_seen": "2026-08-10T14:03:59.976157+00:00",
     "first_seen": "2026-08-10T14:04:20.514123+00:00",
-    "published": true,
+    "published": false,
     "preorder_first_seen": "2026-08-10T14:04:20.514123+00:00"
   },
   "iMusic:7333018038233": {
@@ -919,7 +940,7 @@
     "is_preorder": true,
     "last_seen": "2026-08-10T14:04:16.153774+00:00",
     "first_seen": "2026-08-10T14:04:20.514123+00:00",
-    "published": true,
+    "published": false,
     "preorder_first_seen": "2026-08-10T14:04:20.514123+00:00"
   }
 }
