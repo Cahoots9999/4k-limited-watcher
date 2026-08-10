@@ -12,14 +12,20 @@ permissions:
   id-token: write
 
 concurrency:
-  group: "4k-watcher"
+  group: "4k-limited-watcher"
   cancel-in-progress: false
 
 jobs:
-  check:
+  watch-and-publish:
+
     runs-on: ubuntu-latest
 
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
     steps:
+
       - name: Check out repository
         uses: actions/checkout@v4
 
@@ -33,32 +39,26 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run watcher
-        run: python watcher.py
+      - name: Check Ginza and iMusic
+        run: |
+          python watcher.py
 
-      - name: Save state
+      - name: Save watcher state
         run: |
           git config user.name "4K Watcher"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add data/products.json public/4k-limited.xml
+          git add data/products.json
+          git add public/4k-limited.xml
 
           if git diff --cached --quiet; then
-            echo "No changes."
+            echo "No changes to commit."
           else
             git commit -m "Update 4K limited edition feed"
             git push
           fi
 
-  deploy:
-    needs: check
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Setup Pages
+      - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
       - name: Upload RSS
@@ -66,5 +66,6 @@ jobs:
         with:
           path: ./public
 
-      - name: Deploy to GitHub Pages
+      - name: Deploy RSS feed
+        id: deployment
         uses: actions/deploy-pages@v4
