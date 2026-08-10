@@ -1092,12 +1092,14 @@ def merge_products(
     state,
     discovered,
 ):
-
     now = datetime.now(
         timezone.utc
     ).isoformat()
 
     new_items = []
+
+    # IDs for products that are valid RIGHT NOW.
+    current_ids = set()
 
     for product in discovered:
 
@@ -1105,7 +1107,12 @@ def merge_products(
             product
         )
 
-        # New product.
+        current_ids.add(pid)
+
+        # ----------------------------------------------------
+        # New product
+        # ----------------------------------------------------
+
         if pid not in state:
 
             product[
@@ -1126,18 +1133,24 @@ def merge_products(
                 product
             )
 
-            print(
+           print(
                 f"NEW: "
                 f"{product['source']} - "
                 f"{product['title']}"
             )
 
+            print(
+                f"MATCH: "
+                f"{product['title']}"
+            )
+
             continue
 
-        # Existing product.
-        old = state[
-            pid
-        ]
+        # ----------------------------------------------------
+        # Existing product
+        # ----------------------------------------------------
+
+        old = state[pid]
 
         old_preorder = old.get(
             "is_preorder",
@@ -1167,6 +1180,10 @@ def merge_products(
             "first_seen"
         ] = first_seen
 
+        old[
+            "published"
+        ] = True
+
         # Product became preorderable.
         if (
             not old_preorder
@@ -1180,10 +1197,6 @@ def merge_products(
                 or now
             )
 
-            old[
-                "published"
-            ] = True
-
             new_items.append(
                 old
             )
@@ -1193,6 +1206,55 @@ def merge_products(
                 f"{old['source']} - "
                 f"{old['title']}"
             )
+
+        # Show every current match.
+        print(
+            f"MATCH: "
+            f"{old['title']}"
+        )
+
+    # --------------------------------------------------------
+    # Unpublish products that no longer match.
+    #
+    # IMPORTANT:
+    # We only do this for iMusic.
+    # Ginza is being handled separately.
+    # --------------------------------------------------------
+
+    unpublished = 0
+
+    for pid, product in state.items():
+
+        if product.get(
+            "source"
+        ) != "iMusic":
+
+            continue
+
+        if pid not in current_ids:
+
+            if product.get(
+                "published",
+                True,
+            ):
+
+                product[
+                    "published"
+                ] = False
+
+                unpublished += 1
+
+                print(
+                    f"UNPUBLISHED: "
+                    f"{product.get('title', 'Unknown')}"
+                )
+
+    if unpublished:
+
+        print(
+            f"Products removed from "
+            f"RSS: {unpublished}"
+        )
 
     return (
         state,
