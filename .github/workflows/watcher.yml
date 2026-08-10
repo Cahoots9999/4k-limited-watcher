@@ -1,0 +1,70 @@
+name: 4K Limited Edition Watcher
+
+on:
+  workflow_dispatch:
+
+  schedule:
+    - cron: "17,47 * * * *"
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "4k-watcher"
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run watcher
+        run: python watcher.py
+
+      - name: Save state
+        run: |
+          git config user.name "4K Watcher"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add data/products.json public/4k-limited.xml
+
+          if git diff --cached --quiet; then
+            echo "No changes."
+          else
+            git commit -m "Update 4K limited edition feed"
+            git push
+          fi
+
+  deploy:
+    needs: check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload RSS
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./public
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
