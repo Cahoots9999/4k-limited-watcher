@@ -1,47 +1,87 @@
+```python
 import json
 import re
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup
 
 
+# ============================================================
+# CONFIGURATION
+# ============================================================
+
 USER_AGENT = (
-    "Mozilla/5.0 (compatible; 4K-Limited-Watcher/1.0; "
+    "Mozilla/5.0 (compatible; 4K-Limited-Watcher/2.0; "
     "+https://github.com/)"
 )
+
+REQUEST_DELAY = 1.0
 
 DATA_FILE = Path("data/products.json")
 OUTPUT_DIR = Path("public")
 FEED_FILE = OUTPUT_DIR / "4k-limited.xml"
 
-GINZA_URL = "https://www.ginza.se/Film/Kommande/4K/546"
+GINZA_START_URL = "https://www.ginza.se/Film/Kommande/4K/546"
+IMUSIC_START_URL = "https://imusic.se/movies"
 
-# iMusic's catalogue/search endpoint can change over time.
-# We start with the main movie catalogue and discover product links.
-IMUSIC_URL = "https://imusic.se/movies"
+MAX_LIST_PAGES = 8
+MAX_PRODUCT_PAGES = 120
 
-MAX_PRODUCTS_PER_SOURCE = 200
+# How long old RSS items remain in the feed.
+FEED_RETENTION_DAYS = 180
 
 
-def get(url):
-    headers = {
+# ============================================================
+# HTTP
+# ============================================================
+
+session = requests.Session()
+
+session.headers.update(
+    {
         "User-Agent": USER_AGENT,
         "Accept-Language": "sv-SE,sv;q=0.9,en;q=0.8",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     }
+)
 
-    response = requests.get(url, headers=headers, timeout=30)
+
+def get_html(url):
+    """Download a page with a small delay between requests."""
+
+    response = session.get(url, timeout=30)
     response.raise_for_status()
 
-    time.sleep(1)
+    time.sleep(REQUEST_DELAY)
+
     return response.text
 
 
+# ============================================================
+# GENERAL HELPERS
+# ============================================================
+
 def clean(text):
     return re.sub(r"\s+", " ", text or "").strip()
+
+
+def normalize_url(url):
+    """Remove fragments and normalize URLs."""
+
+    parsed = urlparse(url)
+
+    return parsed._replace(
+        fragment="",
+        query=parsed.query,
+    ).geturl()
+
+
+def absolute_url(base, href):
+    return normalize_url(urljoin(base, href))
 
 
 def load_state():
@@ -50,220 +90,611 @@ def load_state():
 
     try:
         return json.loads(DATA_FILE.read_text(encoding="utf-8"))
-    except Exception:
+    except Exception as exc:
+        print(f"Could not load state: {exc}")
         return {}
 
 
 def save_state(products):
     DATA_FILE.parent.mkdir(parents=True, exist_ok=True)
+
     DATA_FILE.write_text(
         json.dumps(products, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
 
 
-def is_limited(text):
-    text = text.lower()
+def text_from_soup(soup):
+    return clean(soup.get_text(" ", strip=True))
 
-    keywords = [
-        "limited",
-        "steelbook",
-        "collector",
-        "collector's",
-        "collectors",
-        "special edition",
-        "deluxe",
-        "restored limited",
-    ]
 
-    return any(keyword in text for keyword in keywords)
+# ============================================================
+# FILTERS
+# ============================================================
+
+LIMITED_KEYWORDS = [
+    "limited",
+    "steelbook",
+    "collector",
+    "collector's",
+    "collectors",
+    "special edition",
+    "deluxe edition",
+    "deluxe",
+    "restored limited",
+    "limited edition",
+]
 
 
 def is_4k(text):
     text = text.lower()
 
-    keywords = [
-        "4k",
-        "4k ultra hd",
-        "4k uhd",
-        "4k ultra hd/bd",
-        "4k uhd + blu-ray",
+    patterns = [
+        r"\b4k\b",
+        r"4k ultra hd",
+        r"4k uhd",
+        r"ultra hd",
+        r"uhd blu-ray",
     ]
 
-    return any(keyword in text for keyword in keywords)
+    return any(re.search(pattern, text) for pattern in patterns)
 
 
-def is_future_date(date_string):
-    if not date_string:
-        return True
+def is_limited(text):
+    text = text.lower()
 
-    formats = [
-        "%Y-%m-%d",
-        "%d %B %Y",
-        "%d %b %Y",
+    return any(keyword in text for keyword in LIMITED_KEYWORDS)
+
+
+def has_preorder(text):
+    text = text.lower()
+
+    preorder_words = [
+        "förboka",
+        "förbeställ",
+        "pre-order",
+        "preorder",
+        "pre order",
     ]
 
-    date_string = clean(date_string)
+    return any(word in text for word in preorder_words)
 
-    for fmt in formats:
+
+def looks_like_ginza_product(url):
+    return "/product/" in url.lower()
+
+
+def looks_like_imusic_product(url):
+    return "/movies/" in url.lower()
+
+
+# ============================================================
+# DATE PARSING
+# ============================================================
+
+SWEDISH_MONTHS = {
+    "januari": 1,
+    "februari": 2,
+    "mars": 3,
+    "april": 4,
+    "maj": 5,
+    "juni": 6,
+    "juli": 7,
+    "augusti": 8,
+    "september": 9,
+    "oktober": 10,
+    "november": 11,
+    "december": 12,
+}
+
+
+def parse_date(text):
+    """
+    Try to find a date such as:
+      19 oktober 2026
+      19 okt 2026
+      2026-10-19
+      19/10/2026
+    """
+
+    if not text:
+        return None
+
+    text = clean(text).lower()
+
+    # YYYY-MM-DD
+    match = re.search(r"\b(20\d{2})-(\d{1,2})-(\d{1,2})\b", text)
+
+    if match:
         try:
-            date = datetime.strptime(date_string, fmt)
-            return date.date() >= datetime.now().date()
+            return datetime(
+                int(match.group(1)),
+                int(match.group(2)),
+                int(match.group(3)),
+                tzinfo=timezone.utc,
+            )
         except ValueError:
             pass
 
-    return True
+    # DD/MM/YYYY
+    match = re.search(r"\b(\d{1,2})/(\d{1,2})/(20\d{2})\b", text)
+
+    if match:
+        try:
+            return datetime(
+                int(match.group(3)),
+                int(match.group(2)),
+                int(match.group(1)),
+                tzinfo=timezone.utc,
+            )
+        except ValueError:
+            pass
+
+    # Swedish month names
+    month_pattern = "|".join(SWEDISH_MONTHS.keys())
+
+    match = re.search(
+        rf"\b(\d{{1,2}})\s+({month_pattern})\s+(20\d{{2}})\b",
+        text,
+    )
+
+    if match:
+        try:
+            return datetime(
+                int(match.group(3)),
+                SWEDISH_MONTHS[match.group(2)],
+                int(match.group(1)),
+                tzinfo=timezone.utc,
+            )
+        except ValueError:
+            pass
+
+    return None
+
+
+def extract_release_date(text):
+    patterns = [
+        r"releasedatum\s+(.{1,40})",
+        r"release\s+date\s+(.{1,40})",
+        r"released\s+(.{1,40})",
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, text, re.IGNORECASE)
+
+        if match:
+            date = parse_date(match.group(1))
+
+            if date:
+                return date
+
+    # Fall back to searching the whole page.
+    return parse_date(text)
+
+
+# ============================================================
+# PRODUCT DATA EXTRACTION
+# ============================================================
+
+def extract_ean(text):
+    patterns = [
+        r"EAN/UPC\s+([0-9]{8,14})",
+        r"EAN\s+([0-9]{8,14})",
+        r"UPC\s+([0-9]{8,14})",
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, text, re.IGNORECASE)
+
+        if match:
+            return match.group(1)
+
+    return ""
+
+
+def extract_price(text):
+    patterns = [
+        r"SEK\s*([0-9][0-9.,]*)",
+        r"([0-9][0-9.,]*)\s*SEK",
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, text, re.IGNORECASE)
+
+        if match:
+            return f"{match.group(1)} kr"
+
+    return ""
+
+
+def extract_title(soup):
+    h1 = soup.find("h1")
+
+    if h1:
+        title = clean(h1.get_text(" ", strip=True))
+
+        if title:
+            return title
+
+    if soup.title:
+        return clean(soup.title.get_text())
+
+    return "Okänd titel"
+
+
+# ============================================================
+# LIST PAGE DISCOVERY
+# ============================================================
+
+def collect_links_from_page(
+    url,
+    product_detector,
+    include_link_detector=None,
+):
+    """
+    Return:
+      product links
+      additional list/category links
+    """
+
+    html = get_html(url)
+    soup = BeautifulSoup(html, "html.parser")
+
+    product_links = set()
+    list_links = set()
+
+    for anchor in soup.find_all("a", href=True):
+        href = anchor.get("href")
+
+        if not href:
+            continue
+
+        full_url = absolute_url(url, href)
+
+        # Keep crawling on the same site.
+        if urlparse(full_url).netloc != urlparse(url).netloc:
+            continue
+
+        if product_detector(full_url):
+            product_links.add(full_url)
+            continue
+
+        if include_link_detector and include_link_detector(anchor, full_url):
+            list_links.add(full_url)
+
+    return product_links, list_links
+
+
+# ============================================================
+# GINZA
+# ============================================================
+
+def ginza_list_link(anchor, url):
+    text = clean(anchor.get_text(" ", strip=True)).lower()
+
+    # Pagination
+    if any(
+        word in text
+        for word in [
+            "nästa",
+            "föregående",
+            "visa fler",
+            "visa alla",
+            "next",
+        ]
+    ):
+        return True
+
+    # Ginza category/listing links.
+    path = urlparse(url).path.lower()
+
+    if "/film/" in path and "/product/" not in path:
+        return True
+
+    return False
+
+
+def parse_ginza_product(url):
+    try:
+        html = get_html(url)
+        soup = BeautifulSoup(html, "html.parser")
+        text = text_from_soup(soup)
+
+        title = extract_title(soup)
+
+        if not is_4k(text):
+            return None
+
+        if not is_limited(title + " " + text):
+            return None
+
+        release_date = extract_release_date(text)
+
+        return {
+            "source": "Ginza",
+            "title": title,
+            "url": url,
+            "ean": extract_ean(text),
+            "release_date": (
+                release_date.strftime("%Y-%m-%d")
+                if release_date
+                else ""
+            ),
+            "price": extract_price(text),
+            "is_4k": True,
+            "is_limited": True,
+            "is_preorder": True,  # Source is Ginza's "Kommande" 4K page.
+            "last_seen": datetime.now(timezone.utc).isoformat(),
+        }
+
+    except Exception as exc:
+        print(f"Ginza product failed: {url}: {exc}")
+        return None
 
 
 def parse_ginza():
-    html = get(GINZA_URL)
-    soup = BeautifulSoup(html, "html.parser")
+    print("Discovering Ginza products...")
+
+    product_urls = set()
+    pages_to_visit = [GINZA_START_URL]
+    visited = set()
+
+    while pages_to_visit and len(visited) < MAX_LIST_PAGES:
+        url = pages_to_visit.pop(0)
+
+        if url in visited:
+            continue
+
+        visited.add(url)
+
+        try:
+            products, list_links = collect_links_from_page(
+                url,
+                looks_like_ginza_product,
+                ginza_list_link,
+            )
+
+            product_urls.update(products)
+
+            for link in list_links:
+                if link not in visited and len(pages_to_visit) < MAX_LIST_PAGES:
+                    pages_to_visit.append(link)
+
+        except Exception as exc:
+            print(f"Ginza listing failed: {url}: {exc}")
+
+    print(f"Ginza product URLs found: {len(product_urls)}")
 
     results = []
 
-    for link in soup.find_all("a", href=True):
-        href = link.get("href", "")
-        title = clean(link.get_text(" ", strip=True))
+    for url in list(product_urls)[:MAX_PRODUCT_PAGES]:
+        product = parse_ginza_product(url)
 
-        if not href or not title:
-            continue
+        if product:
+            results.append(product)
 
-        if "/product/" not in href.lower():
-            continue
-
-        full_url = urljoin(GINZA_URL, href)
-
-        # We only use products that look like limited/special editions.
-        if not is_limited(title):
-            continue
-
-        product = {
-            "source": "Ginza",
-            "title": title,
-            "url": full_url,
-            "ean": "",
-            "release_date": "",
-            "price": "",
-            "description": "",
-        }
-
-        results.append(product)
-
-        if len(results) >= MAX_PRODUCTS_PER_SOURCE:
-            break
+    print(f"Ginza matching products: {len(results)}")
 
     return results
+
+
+# ============================================================
+# iMUSIC
+# ============================================================
+
+def imusic_list_link(anchor, url):
+    text = clean(anchor.get_text(" ", strip=True)).lower()
+
+    # "Visa alla" is particularly useful on the iMusic movie page.
+    if "visa alla" in text:
+        return True
+
+    # Pagination.
+    if any(
+        word in text
+        for word in [
+            "nästa",
+            "next",
+            "föregående",
+            "previous",
+        ]
+    ):
+        return True
+
+    path = urlparse(url).path.lower()
+
+    # Movie category/listing pages.
+    if "/movies" in path and "/movies/" not in path:
+        return True
+
+    return False
+
+
+def parse_imusic_product(url):
+    try:
+        html = get_html(url)
+        soup = BeautifulSoup(html, "html.parser")
+        text = text_from_soup(soup)
+
+        title = extract_title(soup)
+
+        # Critical: the actual product must be 4K.
+        if not is_4k(text):
+            return None
+
+        # Critical: it must be a limited/special edition.
+        if not is_limited(title + " " + text):
+            return None
+
+        preorder = has_preorder(text)
+
+        # We specifically want preorder items.
+        if not preorder:
+            return None
+
+        release_date = extract_release_date(text)
+
+        # If we have a release date in the past, don't treat it
+        # as a new preorder.
+        if release_date:
+            today = datetime.now(timezone.utc).date()
+
+            if release_date.date() < today:
+                return None
+
+        return {
+            "source": "iMusic",
+            "title": title,
+            "url": url,
+            "ean": extract_ean(text),
+            "release_date": (
+                release_date.strftime("%Y-%m-%d")
+                if release_date
+                else ""
+            ),
+            "price": extract_price(text),
+            "is_4k": True,
+            "is_limited": True,
+            "is_preorder": True,
+            "last_seen": datetime.now(timezone.utc).isoformat(),
+        }
+
+    except Exception as exc:
+        print(f"iMusic product failed: {url}: {exc}")
+        return None
 
 
 def parse_imusic():
-    html = get(IMUSIC_URL)
-    soup = BeautifulSoup(html, "html.parser")
+    print("Discovering iMusic products...")
 
-    product_urls = []
+    product_urls = set()
+    pages_to_visit = [IMUSIC_START_URL]
+    visited = set()
 
-    for link in soup.find_all("a", href=True):
-        href = link.get("href", "")
+    while pages_to_visit and len(visited) < MAX_LIST_PAGES:
+        url = pages_to_visit.pop(0)
 
-        if "/movies/" not in href:
+        if url in visited:
             continue
 
-        full_url = urljoin(IMUSIC_URL, href)
+        visited.add(url)
 
-        if full_url not in product_urls:
-            product_urls.append(full_url)
+        try:
+            products, list_links = collect_links_from_page(
+                url,
+                looks_like_imusic_product,
+                imusic_list_link,
+            )
 
-        if len(product_urls) >= MAX_PRODUCTS_PER_SOURCE:
-            break
+            product_urls.update(products)
+
+            for link in list_links:
+                if link not in visited and len(pages_to_visit) < MAX_LIST_PAGES:
+                    pages_to_visit.append(link)
+
+        except Exception as exc:
+            print(f"iMusic listing failed: {url}: {exc}")
+
+    print(f"iMusic product URLs found: {len(product_urls)}")
 
     results = []
 
-    for url in product_urls:
-        try:
-            product_html = get(url)
-            product_soup = BeautifulSoup(product_html, "html.parser")
+    for url in list(product_urls)[:MAX_PRODUCT_PAGES]:
+        product = parse_imusic_product(url)
 
-            page_text = clean(product_soup.get_text(" ", strip=True))
-            title = clean(product_soup.title.get_text()) if product_soup.title else ""
+        if product:
+            results.append(product)
 
-            if not is_4k(page_text):
-                continue
-
-            if not is_limited(page_text):
-                continue
-
-            # iMusic explicitly exposes "Förboka" on preorder pages.
-            if "förboka" not in page_text.lower():
-                continue
-
-            # EAN/UPC
-            ean = ""
-            match = re.search(r"EAN/UPC\s+([0-9]{8,14})", page_text)
-            if match:
-                ean = match.group(1)
-
-            # Release date
-            release_date = ""
-            match = re.search(
-                r"Releasedatum\s+([0-9]{1,2}\s+\w+\s+[0-9]{4})",
-                page_text,
-                re.IGNORECASE,
-            )
-            if match:
-                release_date = match.group(1)
-
-            # Price
-            price = ""
-            match = re.search(r"SEK\s+([0-9][0-9.,]*)", page_text)
-            if match:
-                price = f"{match.group(1)} kr"
-
-            # Better title: first H1
-            h1 = product_soup.find("h1")
-            if h1:
-                title = clean(h1.get_text(" ", strip=True))
-
-            results.append(
-                {
-                    "source": "iMusic",
-                    "title": title,
-                    "url": url,
-                    "ean": ean,
-                    "release_date": release_date,
-                    "price": price,
-                    "description": "",
-                }
-            )
-
-        except Exception as exc:
-            print(f"Could not parse {url}: {exc}")
+    print(f"iMusic matching products: {len(results)}")
 
     return results
 
 
+# ============================================================
+# STATE + NEW PRODUCT DETECTION
+# ============================================================
+
 def product_id(product):
-    if product.get("ean"):
-        return f"{product['source']}:{product['ean']}"
+    """
+    EAN is preferred because it is stable.
+    Fall back to store + URL.
+    """
+
+    ean = product.get("ean")
+
+    if ean:
+        return f"{product['source']}:{ean}"
 
     return f"{product['source']}:{product['url']}"
 
 
-def merge_products(old, new):
+def merge_products(state, discovered):
+    """
+    Add new products and update existing ones.
+
+    A product is published when:
+      - it is completely new, or
+      - it was previously not a preorder and now is one.
+    """
+
     now = datetime.now(timezone.utc).isoformat()
 
-    for product in new:
+    new_items = []
+
+    for product in discovered:
         pid = product_id(product)
 
-        if pid not in old:
+        if pid not in state:
             product["first_seen"] = now
-            old[pid] = product
+            product["published"] = True
+            product["preorder_first_seen"] = now
+
+            state[pid] = product
+            new_items.append(product)
+
+            print(
+                f"NEW: {product['source']} - {product['title']}"
+            )
+
+            continue
+
+        old = state[pid]
+
+        was_preorder = old.get("is_preorder", False)
+        is_preorder_now = product.get("is_preorder", False)
+
+        first_seen = old.get("first_seen", now)
+        preorder_first_seen = old.get(
+            "preorder_first_seen",
+            "",
+        )
+
+        old.update(product)
+
+        old["first_seen"] = first_seen
+
+        # Product became preorderable after we first saw it.
+        if not was_preorder and is_preorder_now:
+            old["published"] = True
+
+            if not preorder_first_seen:
+                old["preorder_first_seen"] = now
+
+            new_items.append(old)
+
+            print(
+                f"NEW PREORDER: {old['source']} - {old['title']}"
+            )
+
         else:
-            # Update information without changing first_seen.
-            first_seen = old[pid].get("first_seen", now)
-            old[pid].update(product)
-            old[pid]["first_seen"] = first_seen
+            old["published"] = old.get("published", False)
 
-    return old
+    return state, new_items
 
+
+# ============================================================
+# RSS
+# ============================================================
 
 def xml_escape(text):
     return (
@@ -276,17 +707,57 @@ def xml_escape(text):
     )
 
 
-def make_feed(products):
+def make_description(product):
+    source = xml_escape(product.get("source", ""))
+    price = xml_escape(product.get("price", ""))
+    release = xml_escape(product.get("release_date", ""))
+
+    return (
+        f"<strong>{source}</strong><br>"
+        f"4K Ultra HD<br>"
+        f"Limited / Special Edition<br>"
+        f"Förbokning<br>"
+        f"Release: {release or 'Ej angivet'}<br>"
+        f"Pris: {price or 'Ej angivet'}"
+    )
+
+
+def make_feed(state):
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Newest discoveries first.
-    items = sorted(
-        products.values(),
-        key=lambda x: x.get("first_seen", ""),
-        reverse=True,
-    )[:100]
+    cutoff = datetime.now(timezone.utc).timestamp() - (
+        FEED_RETENTION_DAYS * 86400
+    )
 
-    now = datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S GMT")
+    items = []
+
+    for product in state.values():
+        if not product.get("published"):
+            continue
+
+        timestamp = product.get(
+            "preorder_first_seen"
+        ) or product.get(
+            "first_seen"
+        )
+
+        try:
+            dt = datetime.fromisoformat(
+                timestamp.replace("Z", "+00:00")
+            )
+
+            if dt.timestamp() >= cutoff:
+                items.append((dt, product))
+
+        except Exception:
+            continue
+
+    items.sort(
+        key=lambda item: item[0],
+        reverse=True,
+    )
+
+    now = datetime.now(timezone.utc)
 
     chunks = [
         '<?xml version="1.0" encoding="UTF-8"?>',
@@ -294,38 +765,36 @@ def make_feed(products):
         "<channel>",
         "<title>4K Limited Editions – Ginza + iMusic</title>",
         "<link>https://www.ginza.se/</link>",
-        "<description>Kommande 4K Limited Editions från Ginza och iMusic.</description>",
-        f"<lastBuildDate>{now}</lastBuildDate>",
+        (
+            "<description>"
+            "Kommande 4K Limited Editions och Steelbooks "
+            "från Ginza och iMusic."
+            "</description>"
+        ),
+        (
+            f"<lastBuildDate>"
+            f"{now.strftime('%a, %d %b %Y %H:%M:%S GMT')}"
+            f"</lastBuildDate>"
+        ),
     ]
 
-    for product in items:
+    for dt, product in items:
         title = xml_escape(product.get("title", "Okänd titel"))
         url = xml_escape(product.get("url", ""))
-        source = xml_escape(product.get("source", ""))
-        price = xml_escape(product.get("price", ""))
-        release = xml_escape(product.get("release_date", ""))
+        description = make_description(product)
 
-        description = (
-            f"{source}<br>"
-            f"4K Limited Edition<br>"
-            f"Release: {release}<br>"
-            f"Pris: {price}"
+        pub_date = dt.strftime(
+            "%a, %d %b %Y %H:%M:%S GMT"
         )
 
-        pub_date = product.get("first_seen", "")
-
-        try:
-            dt = datetime.fromisoformat(pub_date.replace("Z", "+00:00"))
-            pub_date = dt.strftime("%a, %d %b %Y %H:%M:%S GMT")
-        except Exception:
-            pub_date = now
+        guid = xml_escape(product_id(product))
 
         chunks.extend(
             [
                 "<item>",
                 f"<title>{title}</title>",
                 f"<link>{url}</link>",
-                f"<guid isPermaLink=\"true\">{url}</guid>",
+                f"<guid isPermaLink=\"false\">{guid}</guid>",
                 f"<description>{description}</description>",
                 f"<pubDate>{pub_date}</pubDate>",
                 "</item>",
@@ -339,38 +808,69 @@ def make_feed(products):
         ]
     )
 
-    FEED_FILE.write_text("\n".join(chunks), encoding="utf-8")
+    FEED_FILE.write_text(
+        "\n".join(chunks),
+        encoding="utf-8",
+    )
 
+    print(
+        f"RSS contains {len(items)} published items."
+    )
+
+
+# ============================================================
+# MAIN
+# ============================================================
 
 def main():
-    print("Loading previous state...")
+    print("=" * 60)
+    print("4K LIMITED EDITION WATCHER")
+    print("=" * 60)
+
     state = load_state()
 
-    print("Checking Ginza...")
+    print(
+        f"Existing products in database: {len(state)}"
+    )
+
+    ginza_products = []
+    imusic_products = []
+
     try:
-        ginza = parse_ginza()
-        print(f"Ginza candidates: {len(ginza)}")
+        ginza_products = parse_ginza()
     except Exception as exc:
-        print(f"Ginza failed: {exc}")
-        ginza = []
+        print(f"Ginza error: {exc}")
 
-    print("Checking iMusic...")
     try:
-        imusic = parse_imusic()
-        print(f"iMusic candidates: {len(imusic)}")
+        imusic_products = parse_imusic()
     except Exception as exc:
-        print(f"iMusic failed: {exc}")
-        imusic = []
+        print(f"iMusic error: {exc}")
 
-    all_products = ginza + imusic
+    discovered = ginza_products + imusic_products
 
-    state = merge_products(state, all_products)
+    print(
+        f"Total matching products discovered: "
+        f"{len(discovered)}"
+    )
+
+    state, new_items = merge_products(
+        state,
+        discovered,
+    )
+
     save_state(state)
     make_feed(state)
 
-    print(f"Total products in database: {len(state)}")
-    print(f"RSS generated: {FEED_FILE}")
+    print("=" * 60)
+    print(
+        f"New RSS items this run: {len(new_items)}"
+    )
+    print(
+        f"Database size: {len(state)}"
+    )
+    print("=" * 60)
 
 
 if __name__ == "__main__":
     main()
+```
