@@ -11,49 +11,68 @@ from bs4 import BeautifulSoup
 
 
 # ============================================================
-# CONFIG
+# 4K LIMITED EDITION WATCHER v5
 # ============================================================
 
-USER_AGENT = (
-    "Mozilla/5.0 (compatible; 4K-Limited-Watcher/4.1)"
-)
+VERSION = "5.0"
 
 DATA_FILE = Path("data/products.json")
 OUTPUT_DIR = Path("public")
 FEED_FILE = OUTPUT_DIR / "4k-limited.xml"
 
-# Ginza is intentionally left disabled for product parsing.
-# We will handle Ginza separately later.
-GINZA_URLS = [
-    "https://www.ginza.se/Film/Kommande/4K/546",
-]
+USER_AGENT = (
+    "Mozilla/5.0 (compatible; 4K-Limited-Watcher/5.0)"
+)
+
+REQUEST_TIMEOUT = 12
 
 IMUSIC_URL = "https://imusic.se/movies"
 
 IMUSIC_WORKERS = 10
 MAX_IMUSIC_PRODUCTS = 500
 
-REQUEST_TIMEOUT = 12
-GINZA_RETRIES = 2
-
-FEED_RETENTION_DAYS = 180
+# Ginza intentionally disabled for now.
+GINZA_ENABLED = False
 
 
 # ============================================================
-# SPECIAL EDITION KEYWORDS
+# EDITION RULES
 # ============================================================
 
-SPECIAL_EDITION_KEYWORDS = [
-    "limited edition",
-    "limited steelbook",
-    "steelbook",
-    "collector's edition",
-    "collectors edition",
-    "collector edition",
-    "deluxe limited edition",
-    "deluxe edition",
-    "limited mediabook",
-    "mediabook",
+# These indicate that the product is actually a limited /
+# collector type edition.
+#
+# IMPORTANT:
+# "Steelbook" by itself is NOT enough.
+#
+# Accepted examples:
+#   Limited Edition
+#   Limited Steelbook
+#   Deluxe Limited Edition
+#   Collector's Edition
+#   Collector's Steelbook
+#   Limited Collector's Edition
+#
+# Rejected examples:
+#   Steelbook edition
+#   Standard edition
+#   Nordic edition
+#   Photocards edition
+#   2026 Mixes edition
+
+LIMITED_PATTERNS = [
+    r"\blimited\s+edition\b",
+    r"\blimited\s+steelbook\b",
+    r"\blimited\s+collector'?s?\s+edition\b",
+    r"\blimited\s+collector'?s?\s+steelbook\b",
+    r"\bdeluxe\s+limited\s+edition\b",
+    r"\bdeluxe\s+limited\s+steelbook\b",
+]
+
+COLLECTOR_PATTERNS = [
+    r"\bcollector'?s?\s+edition\b",
+    r"\bcollector'?s?\s+steelbook\b",
+    r"\bcollector'?s?\s+edition\s+steelbook\b",
 ]
 
 
@@ -71,6 +90,8 @@ session.headers.update(
             "text/html,application/xhtml+xml,"
             "application/xml;q=0.9,*/*;q=0.8"
         ),
+        "Cache-Control": "no-cache",
+        "Pragma": "no-cache",
     }
 )
 
@@ -164,11 +185,11 @@ def is_4k_text(text):
     text = clean(text).lower()
 
     patterns = [
-        r"\b4k ultra hd\b",
-        r"\b4k uhd\b",
+        r"\b4k\s+ultra\s+hd\b",
+        r"\b4k\s+uhd\b",
         r"\b4k\b",
-        r"\bultra hd\b",
-        r"\buhd blu-ray\b",
+        r"\bultra\s+hd\b",
+        r"\buhd\s+blu-ray\b",
     ]
 
     return any(
@@ -181,70 +202,77 @@ def is_4k_text(text):
 
 
 # ============================================================
-# SPECIAL EDITION DETECTION
+# LIMITED / COLLECTOR DETECTION
 # ============================================================
 
-def is_special_edition(text):
+def edition_is_limited(text):
     """
-    Strict edition detection.
+    Returns True only when the text explicitly indicates
+    a limited or collector edition.
 
-    Accepted examples:
-        Limited Edition
-        Limited Steelbook
-        Steelbook
-        Collector's Edition
-        Deluxe Edition
-        Mediabook
-
-    Rejected examples:
-        Nordic edition
-        Photocards edition
-        Standard edition
-        2026 Mixes edition
+    Ordinary Steelbook is intentionally NOT enough.
     """
 
     text = clean(text).lower()
 
-    for keyword in SPECIAL_EDITION_KEYWORDS:
-        if keyword in text:
+    for pattern in LIMITED_PATTERNS:
+        if re.search(
+            pattern,
+            text,
+            re.IGNORECASE,
+        ):
+            return True
+
+    for pattern in COLLECTOR_PATTERNS:
+        if re.search(
+            pattern,
+            text,
+            re.IGNORECASE,
+        ):
             return True
 
     return False
 
 
-# ============================================================
-# PREORDER DETECTION
-# ============================================================
+def edition_reason(text):
+    """
+    Returns a human-readable reason for why the edition matched.
+    """
 
-def has_preorder(text):
     text = clean(text).lower()
 
-    preorder_words = [
-        "förboka",
-        "förbeställ",
-        "pre-order",
-        "preorder",
-        "pre order",
-    ]
+    for pattern in LIMITED_PATTERNS:
+        if re.search(
+            pattern,
+            text,
+            re.IGNORECASE,
+        ):
+            return "limited"
 
-    return any(
-        word in text
-        for word in preorder_words
-    )
+    for pattern in COLLECTOR_PATTERNS:
+        if re.search(
+            pattern,
+            text,
+            re.IGNORECASE,
+        ):
+            return "collector"
+
+    return ""
 
 
 # ============================================================
-# PRODUCT TITLE
+# TITLE DETECTION
 # ============================================================
 
 def get_title_candidates(soup):
     candidates = []
 
-    # OpenGraph title.
-    for selector in [
+    selectors = [
         'meta[property="og:title"]',
         'meta[name="twitter:title"]',
-    ]:
+    ]
+
+    for selector in selectors:
         tag = soup.select_one(
             selector
         )
@@ -262,7 +290,6 @@ def get_title_candidates(soup):
                     content
                 )
 
-    # H1.
     for tag in soup.find_all("h1"):
         text = clean(
             tag.get_text(
@@ -276,23 +303,6 @@ def get_title_candidates(soup):
                 text
             )
 
-    # H2/H3 fallback.
-    for tag in soup.find_all(
-        ["h2", "h3"]
-    ):
-        text = clean(
-            tag.get_text(
-                " ",
-                strip=True,
-            )
-        )
-
-        if text:
-            candidates.append(
-                text
-            )
-
-    # Browser title fallback.
     if soup.title:
         title = clean(
             soup.title.get_text()
@@ -303,7 +313,6 @@ def get_title_candidates(soup):
                 title
             )
 
-    # Remove duplicates.
     unique = []
 
     for candidate in candidates:
@@ -315,85 +324,68 @@ def get_title_candidates(soup):
     return unique
 
 
-def find_special_edition_title(soup):
-    """
-    Find a title that itself indicates a special edition.
-
-    This is deliberately NOT based on the whole page.
-    """
-
+def get_product_title(soup):
     candidates = get_title_candidates(
         soup
     )
 
-    for candidate in candidates:
-        if is_special_edition(
-            candidate
-        ):
-            return candidate
+    if candidates:
+        return candidates[0]
 
-    return ""
+    return "Unknown title"
 
 
 # ============================================================
-# MEDIA / FORMAT INFORMATION
+# PRODUCT PAGE INFORMATION
 # ============================================================
 
 def find_media_text(soup):
-    media_parts = []
+    parts = []
 
-    # Look for explicit "Media" labels.
-    for element in soup.find_all(
-        string=re.compile(
-            r"^\s*Media\s*$",
-            re.IGNORECASE,
-        )
-    ):
-        parent = element.parent
-
-        if parent:
-            if parent.parent:
-                parent_text = clean(
-                    parent.parent.get_text(
-                        " ",
-                        strip=True,
-                    )
-                )
-            else:
-                parent_text = clean(
-                    parent.get_text(
-                        " ",
-                        strip=True,
-                    )
-                )
-
-            if parent_text:
-                media_parts.append(
-                    parent_text
-                )
-
-    # Inspect table rows.
+    # Table rows.
     for row in soup.find_all("tr"):
-        row_text = clean(
+        text = clean(
             row.get_text(
                 " ",
                 strip=True,
             )
         )
 
-        lower = row_text.lower()
+        lower = text.lower()
 
         if (
             "media" in lower
+            or "format" in lower
             or "4k ultra hd" in lower
             or "4k uhd" in lower
         ):
-            media_parts.append(
-                row_text
+            parts.append(
+                text
             )
 
-    return " ".join(
-        media_parts
+    # Elements containing explicit 4K information.
+    for element in soup.find_all(
+        string=re.compile(
+            r"4K|Ultra HD|UHD",
+            re.IGNORECASE,
+        )
+    ):
+        text = clean(
+            element.parent.get_text(
+                " ",
+                strip=True,
+            )
+            if element.parent
+            else str(element)
+        )
+
+        if text:
+            parts.append(
+                text
+            )
+
+    return clean(
+        " ".join(parts)
     )
 
 
@@ -401,33 +393,13 @@ def product_is_4k(
     soup,
     title,
     url,
+    page_text,
 ):
-    """
-    Confirm 4K at product level.
-
-    We check:
-      1. Product title
-      2. Product URL
-      3. Media information
-    """
-
-    title_lower = title.lower()
-    url_lower = url.lower()
-
-    # Actual product title.
     if is_4k_text(
-        title_lower
+        title
     ):
         return True
 
-    # iMusic URLs often contain this.
-    if (
-        "4k-ultra-hd" in url_lower
-        or "4k-uhd" in url_lower
-    ):
-        return True
-
-    # Explicit media information.
     media_text = find_media_text(
         soup
     )
@@ -437,11 +409,98 @@ def product_is_4k(
     ):
         return True
 
+    # URL fallback.
+    url_lower = url.lower()
+
+    if (
+        "4k-ultra-hd" in url_lower
+        or "4k-uhd" in url_lower
+        or "/4k/" in url_lower
+    ):
+        return True
+
+    # Last-resort page check.
+    # We require actual 4K wording somewhere on the page.
+    if is_4k_text(
+        page_text
+    ):
+        return True
+
     return False
 
 
 # ============================================================
-# DATE
+# PREORDER / AVAILABILITY DETECTION
+# ============================================================
+
+def detect_preorder(soup, page_text):
+    """
+    Determine whether the product is currently available
+    for preorder.
+
+    We deliberately distinguish this from merely being a
+    future release.
+
+    The function checks visible page text and common button/
+    availability elements.
+    """
+
+    lower = page_text.lower()
+
+    # Strong positive indicators.
+    positive_patterns = [
+        r"\bpre-?order\b",
+        r"\bpre order\b",
+        r"\bförbeställ\b",
+        r"\bförboka\b",
+        r"\bförhandsbeställ\b",
+        r"\bbeställ nu\b",
+        r"\bboka nu\b",
+    ]
+
+    for pattern in positive_patterns:
+        if re.search(
+            pattern,
+            lower,
+            re.IGNORECASE,
+        ):
+            return True
+
+    # Inspect buttons and links specifically.
+    for tag in soup.find_all(
+        ["button", "a", "input"]
+    ):
+        text = clean(
+            tag.get_text(
+                " ",
+                strip=True,
+            )
+        )
+
+        value = clean(
+            tag.get(
+                "value",
+                "",
+            )
+        )
+
+        combined = (
+            f"{text} {value}"
+        ).lower()
+
+        for pattern in positive_patterns:
+            if re.search(
+                pattern,
+                combined,
+                re.IGNORECASE,
+            ):
+                return True
+
+    return False
+
+
+# ============================================================
+# RELEASE DATE
 # ============================================================
 
 SWEDISH_MONTHS = {
@@ -506,7 +565,6 @@ def parse_date(text):
         SWEDISH_MONTHS.keys()
     )
 
-    # DD month YYYY
     match = re.search(
         rf"\b(\d{{1,2}})\s+({months})\s+(20\d{{2}})\b",
         text,
@@ -530,9 +588,10 @@ def parse_date(text):
 
 def extract_release_date(text):
     patterns = [
-        r"releasedatum\s+(.{1,50})",
-        r"release\s+date\s+(.{1,50})",
-        r"release\s+(.{1,50})",
+        r"release\s*date\s*[:\-]?\s*(.{1,50})",
+        r"release\s*[:\-]?\s*(.{1,50})",
+        r"releasedatum\s*[:\-]?\s*(.{1,50})",
+        r"utgivningsdatum\s*[:\-]?\s*(.{1,50})",
     ]
 
     for pattern in patterns:
@@ -561,9 +620,9 @@ def extract_release_date(text):
 
 def extract_ean(text):
     patterns = [
-        r"EAN/UPC\s+([0-9]{8,14})",
-        r"EAN\s+([0-9]{8,14})",
-        r"UPC\s+([0-9]{8,14})",
+        r"EAN/UPC\s*[:\-]?\s*([0-9]{8,14})",
+        r"\bEAN\s*[:\-]?\s*([0-9]{8,14})",
+        r"\bUPC\s*[:\-]?\s*([0-9]{8,14})",
     ]
 
     for pattern in patterns:
@@ -601,15 +660,8 @@ def extract_price(text):
 
 
 # ============================================================
-# iMUSIC PRODUCT
+# iMUSIC PRODUCT PARSER
 # ============================================================
-
-def looks_like_imusic_product(url):
-    return (
-        "/movies/"
-        in url.lower()
-    )
-
 
 def parse_imusic_product(url):
     try:
@@ -626,38 +678,67 @@ def parse_imusic_product(url):
             soup
         )
 
-        # ----------------------------------------------------
-        # 1. Find actual special-edition title.
-        # ----------------------------------------------------
-
-        product_title = (
-            find_special_edition_title(
-                soup
-            )
+        title = get_product_title(
+            soup
         )
 
-        if not product_title:
-            return None
-
         # ----------------------------------------------------
-        # 2. Confirm 4K at product level.
+        # 1. Must actually be 4K.
         # ----------------------------------------------------
 
         if not product_is_4k(
             soup,
-            product_title,
+            title,
             url,
+            page_text,
         ):
             return None
 
         # ----------------------------------------------------
-        # 3. Must be preorderable.
+        # 2. Must actually be Limited / Collector.
         # ----------------------------------------------------
 
-        if not has_preorder(
-            page_text
+        if not edition_is_limited(
+            title
         ):
-            return None
+            # The title is the strongest source, but some
+            # sites put edition information elsewhere.
+            #
+            # Only use page text if it is close to the product
+            # metadata. This prevents generic site text from
+            # turning ordinary Steelbooks into matches.
+            edition_text = ""
+
+            for tag in soup.find_all(
+                ["h1", "h2", "h3", "li", "tr"]
+            ):
+                text = clean(
+                    tag.get_text(
+                        " ",
+                        strip=True,
+                    )
+                )
+
+                if edition_is_limited(
+                    text
+                ):
+                    edition_text = text
+                    break
+
+            if not edition_text:
+                return None
+
+        else:
+            edition_text = title
+
+        # ----------------------------------------------------
+        # 3. Current preorder status.
+        # ----------------------------------------------------
+
+        is_preorder = detect_preorder(
+            soup,
+            page_text,
+        )
 
         # ----------------------------------------------------
         # 4. Release date.
@@ -669,26 +750,17 @@ def parse_imusic_product(url):
             )
         )
 
-        # If a release date is known and already passed,
-        # don't treat it as a current preorder.
-        if release_date:
-            today = datetime.now(
-                timezone.utc
-            ).date()
-
-            if (
-                release_date.date()
-                < today
-            ):
-                return None
-
         # ----------------------------------------------------
-        # 5. Create product object.
+        # 5. Build product.
         # ----------------------------------------------------
+
+        now = datetime.now(
+            timezone.utc
+        ).isoformat()
 
         return {
             "source": "iMusic",
-            "title": product_title,
+            "title": title,
             "url": url,
             "ean": extract_ean(
                 page_text
@@ -705,21 +777,33 @@ def parse_imusic_product(url):
             ),
             "is_4k": True,
             "is_limited": True,
-            "is_preorder": True,
-            "last_seen": (
-                datetime.now(
-                    timezone.utc
-                ).isoformat()
+            "edition_type": edition_reason(
+                edition_text
             ),
+            "is_preorder": is_preorder,
+            "last_seen": now,
+            "currently_available": is_preorder,
         }
 
-    except Exception:
+    except Exception as exc:
+        print(
+            f"iMusic product error "
+            f"{url}: {exc}"
+        )
+
         return None
 
 
 # ============================================================
 # iMUSIC DISCOVERY
 # ============================================================
+
+def looks_like_imusic_product(url):
+    return (
+        "/movies/"
+        in url.lower()
+    )
+
 
 def discover_imusic_urls():
     print("")
@@ -772,7 +856,7 @@ def discover_imusic_urls():
             url
         )
 
-    urls = list(
+    urls = sorted(
         urls
     )
 
@@ -787,7 +871,7 @@ def discover_imusic_urls():
 
 
 # ============================================================
-# iMUSIC PARALLEL CHECK
+# iMUSIC CHECK
 # ============================================================
 
 def parse_imusic(urls):
@@ -797,6 +881,7 @@ def parse_imusic(urls):
     )
 
     results = []
+
     completed = 0
 
     with ThreadPoolExecutor(
@@ -828,7 +913,7 @@ def parse_imusic(urls):
 
             except Exception as exc:
                 print(
-                    f"iMusic product error: "
+                    f"iMusic parser error: "
                     f"{exc}"
                 )
 
@@ -842,7 +927,10 @@ def parse_imusic(urls):
                     f"{len(futures)}"
                 )
 
-    # Remove duplicate products.
+    # --------------------------------------------------------
+    # Deduplicate.
+    # --------------------------------------------------------
+
     unique = {}
 
     for product in results:
@@ -857,106 +945,59 @@ def parse_imusic(urls):
     )
 
     print(
-        f"iMusic matching products: "
+        f"iMusic relevant products: "
         f"{len(results)}"
+    )
+
+    preorder_count = sum(
+        1
+        for product in results
+        if product.get(
+            "is_preorder",
+            False,
+        )
+    )
+
+    print(
+        f"iMusic currently preorderable: "
+        f"{preorder_count}"
     )
 
     return results
 
 
 # ============================================================
-# GINZA
-# ============================================================
-
-def fetch_ginza():
-    print("")
-    print(
-        "========== GINZA =========="
-    )
-
-    for url in GINZA_URLS:
-
-        for attempt in range(
-            1,
-            GINZA_RETRIES + 1,
-        ):
-            try:
-                print(
-                    f"Ginza: trying "
-                    f"{url} "
-                    f"(attempt {attempt})"
-                )
-
-                html = get_html(
-                    url
-                )
-
-                print(
-                    "Ginza: page downloaded."
-                )
-
-                return html
-
-            except Exception as exc:
-                print(
-                    f"Ginza attempt "
-                    f"{attempt} failed: "
-                    f"{exc}"
-                )
-
-                if (
-                    attempt
-                    < GINZA_RETRIES
-                ):
-                    time.sleep(2)
-
-    print(
-        "Ginza: unable to download "
-        "4K/Kommande page."
-    )
-
-    return None
-
-
-def parse_ginza():
-    html = fetch_ginza()
-
-    if not html:
-        print(
-            "Ginza: 0 products "
-            "(site unreachable)."
-        )
-
-        return []
-
-    # Ginza is intentionally not parsed yet.
-    print(
-        "Ginza parser skipped for now."
-    )
-
-    return []
-
-
-# ============================================================
-# DATABASE
+# PRODUCT ID
 # ============================================================
 
 def product_id(product):
-    ean = product.get(
-        "ean"
+    """
+    Prefer EAN because the URL/title can change.
+
+    Fall back to URL if no EAN is available.
+    """
+
+    ean = clean(
+        product.get(
+            "ean",
+            "",
+        )
     )
 
     if ean:
         return (
-            f"{product['source']}:"
-            f"{ean}"
+            f"{product['source']}:EAN:{ean}"
         )
 
     return (
-        f"{product['source']}:"
-        f"{product['url']}"
+        f"{product['source']}:URL:"
+        f"{normalize_url(product['url'])}"
     )
 
+
+# ============================================================
+# DATABASE MERGE
+# ============================================================
 
 def merge_products(
     state,
@@ -966,12 +1007,17 @@ def merge_products(
         timezone.utc
     ).isoformat()
 
-    new_items = []
+    new_preorders = []
 
-    # Products that currently match the filters.
     current_ids = set()
 
+    print("")
+    print(
+        "======== STATUS CHANGES ========"
+    )
+
     for product in discovered:
+
         pid = product_id(
             product
         )
@@ -980,39 +1026,56 @@ def merge_products(
             pid
         )
 
+        current_preorder = bool(
+            product.get(
+                "is_preorder",
+                False,
+            )
+        )
+
         # ----------------------------------------------------
         # NEW PRODUCT
         # ----------------------------------------------------
 
         if pid not in state:
+
             product[
                 "first_seen"
             ] = now
 
             product[
                 "preorder_first_seen"
-            ] = now
+            ] = (
+                now
+                if current_preorder
+                else ""
+            )
 
             product[
                 "published"
-            ] = True
+            ] = current_preorder
+
+            product[
+                "preorder_notified"
+            ] = current_preorder
 
             state[pid] = product
 
-            new_items.append(
-                product
-            )
+            if current_preorder:
+                new_preorders.append(
+                    product
+                )
 
-            print(
-                f"NEW: "
-                f"{product['source']} - "
-                f"{product['title']}"
-            )
+                print(
+                    "NEW PREORDER: "
+                    f"{product['title']}"
+                )
 
-            print(
-                f"MATCH: "
-                f"{product['title']}"
-            )
+            else:
+                print(
+                    "NEW UPCOMING: "
+                    f"{product['title']}"
+                )
 
             continue
 
@@ -1022,109 +1085,157 @@ def merge_products(
 
         old = state[pid]
 
-        old_preorder = old.get(
-            "is_preorder",
-            False,
+        old_preorder = bool(
+            old.get(
+                "is_preorder",
+                False,
+            )
         )
 
-        new_preorder = product.get(
-            "is_preorder",
-            False,
-        )
-
-        first_seen = old.get(
+        old_first_seen = old.get(
             "first_seen",
             now,
         )
 
-        preorder_first_seen = old.get(
-            "preorder_first_seen",
-            "",
+        old_preorder_first_seen = (
+            old.get(
+                "preorder_first_seen",
+                "",
+            )
         )
 
+        old_notified = bool(
+            old.get(
+                "preorder_notified",
+                False,
+            )
+        )
+
+        # Update product data.
         old.update(
             product
         )
 
         old[
             "first_seen"
-        ] = first_seen
+        ] = old_first_seen
 
-        # It currently matches, therefore it should
-        # be visible in RSS.
-        old[
-            "published"
-        ] = True
+        # ----------------------------------------------------
+        # TRANSITION:
+        #
+        # Was NOT preorderable
+        # ->
+        # IS preorderable
+        # ----------------------------------------------------
 
-        # Product became preorderable again.
         if (
             not old_preorder
-            and new_preorder
+            and current_preorder
         ):
             old[
                 "preorder_first_seen"
-            ] = (
-                preorder_first_seen
-                or now
-            )
+            ] = now
 
-            new_items.append(
-                old
-            )
+            old[
+                "published"
+            ] = True
+
+            # This is the important event.
+            if not old_notified:
+
+                old[
+                    "preorder_notified"
+                ] = True
+
+                new_preorders.append(
+                    old
+                )
+
+                print(
+                    "NEW PREORDER: "
+                    f"{old['title']}"
+                )
+
+            else:
+                print(
+                    "PREORDER ACTIVE: "
+                    f"{old['title']}"
+                )
+
+        # ----------------------------------------------------
+        # STILL PREORDERABLE
+        # ----------------------------------------------------
+
+        elif current_preorder:
+
+            old[
+                "published"
+            ] = True
 
             print(
-                f"NEW PREORDER: "
-                f"{old['source']} - "
+                "STILL PREORDERABLE: "
                 f"{old['title']}"
             )
 
-        print(
-            f"MATCH: "
-            f"{old['title']}"
-        )
+        # ----------------------------------------------------
+        # NO LONGER PREORDERABLE
+        # ----------------------------------------------------
+
+        else:
+
+            old[
+                "published"
+            ] = False
+
+            print(
+                "NOT YET PREORDERABLE: "
+                f"{old['title']}"
+            )
 
     # --------------------------------------------------------
-    # UNPUBLISH OLD iMUSIC PRODUCTS
+    # Products that disappeared from the current catalogue.
+    #
+    # We DON'T delete them from the database.
+    # We simply remove them from RSS.
     # --------------------------------------------------------
 
-    unpublished = 0
+    disappeared = 0
 
     for pid, product in state.items():
 
-        # Only modify iMusic here.
         if product.get(
             "source"
         ) != "iMusic":
             continue
 
-        # If it wasn't found in the current scan,
-        # it no longer passes our filters.
         if pid not in current_ids:
 
             if product.get(
                 "published",
-                True,
+                False,
             ):
+
                 product[
                     "published"
                 ] = False
 
-                unpublished += 1
+                disappeared += 1
 
                 print(
-                    f"UNPUBLISHED: "
+                    "REMOVED FROM RSS: "
                     f"{product.get('title', 'Unknown')}"
                 )
 
-    if unpublished:
+    if disappeared:
         print(
-            f"Products removed from RSS: "
-            f"{unpublished}"
+            f"Products removed because "
+            f"they disappeared: "
+            f"{disappeared}"
         )
 
     return (
         state,
-        new_items,
+        new_preorders,
     )
 
 
@@ -1180,11 +1291,22 @@ def make_description(product):
         )
     )
 
+    edition_type = xml_escape(
+        product.get(
+            "edition_type",
+            "",
+        )
+    )
+
     return (
         f"<strong>{source}</strong><br>"
         f"4K Ultra HD<br>"
-        f"Limited / Special Edition<br>"
-        f"Förbokning<br>"
+        f"Limited / Collector edition"
+        f"<br>"
+        f"Typ: {edition_type}"
+        f"<br>"
+        f"Förbokning aktiv"
+        f"<br>"
         f"Release: "
         f"{release or 'Ej angivet'}"
         f"<br>"
@@ -1199,26 +1321,35 @@ def make_feed(state):
         exist_ok=True,
     )
 
-    cutoff = (
-        datetime.now(
-            timezone.utc
-        ).timestamp()
-        - FEED_RETENTION_DAYS
-        * 86400
-    )
-
     items = []
 
     for product in state.values():
 
-        # Only currently published products.
+        # RSS ONLY contains active preorders.
         if not product.get(
             "published",
             False,
         ):
             continue
 
-        # Only iMusic for now.
+        if not product.get(
+            "is_preorder",
+            False,
+        ):
+            continue
+
+        if not product.get(
+            "is_4k",
+            False,
+        ):
+            continue
+
+        if not product.get(
+            "is_limited",
+            False,
+        ):
+            continue
+
         if product.get(
             "source"
         ) != "iMusic":
@@ -1247,16 +1378,12 @@ def make_feed(state):
         except Exception:
             continue
 
-        if (
-            dt.timestamp()
-            >= cutoff
-        ):
-            items.append(
-                (
-                    dt,
-                    product,
-                )
+        items.append(
+            (
+                dt,
+                product,
             )
+        )
 
     items.sort(
         key=lambda item: item[0],
@@ -1284,9 +1411,9 @@ def make_feed(state):
         ),
         (
             "<description>"
-            "Kommande 4K Limited Editions, "
-            "Steelbooks och specialutgåvor "
-            "från iMusic."
+            "Aktuella förbokningar av "
+            "4K Limited och Collector "
+            "Editions från iMusic."
             "</description>"
         ),
         (
@@ -1388,13 +1515,16 @@ def make_feed(state):
 # ============================================================
 
 def main():
+
     print("")
     print(
         "=" * 60
     )
+
     print(
-        "4K LIMITED EDITION WATCHER v4.1"
+        f"4K LIMITED EDITION WATCHER v{VERSION}"
     )
+
     print(
         "=" * 60
     )
@@ -1410,16 +1540,28 @@ def main():
     # GINZA
     # --------------------------------------------------------
 
-    # Still tested, but intentionally not parsed.
-    parse_ginza()
+    if GINZA_ENABLED:
+        print(
+            "Ginza enabled."
+        )
+
+    else:
+        print(
+            "Ginza: skipped "
+            "(handled later)."
+        )
 
     # --------------------------------------------------------
-    # iMUSIC
+    # iMUSIC DISCOVERY
     # --------------------------------------------------------
 
     imusic_urls = (
         discover_imusic_urls()
     )
+
+    # --------------------------------------------------------
+    # iMUSIC PRODUCT CHECK
+    # --------------------------------------------------------
 
     imusic_products = (
         parse_imusic(
@@ -1428,21 +1570,27 @@ def main():
     )
 
     # --------------------------------------------------------
-    # MERGE
+    # CURRENT DISCOVERY
     # --------------------------------------------------------
-
-    discovered = imusic_products
 
     print("")
     print(
-        f"Total matching products: "
-        f"{len(discovered)}"
+        "================================"
     )
 
-    state, new_items = (
+    print(
+        f"Relevant products discovered: "
+        f"{len(imusic_products)}"
+    )
+
+    # --------------------------------------------------------
+    # MERGE / STATUS CHANGES
+    # --------------------------------------------------------
+
+    state, new_preorders = (
         merge_products(
             state,
-            discovered,
+            imusic_products,
         )
     )
 
@@ -1453,6 +1601,10 @@ def main():
     save_state(
         state
     )
+
+    # --------------------------------------------------------
+    # RSS
+    # --------------------------------------------------------
 
     make_feed(
         state
@@ -1468,9 +1620,15 @@ def main():
     )
 
     print(
-        f"New items this run: "
-        f"{len(new_items)}"
+        f"NEW PREORDERS THIS RUN: "
+        f"{len(new_preorders)}"
     )
+
+    for product in new_preorders:
+        print(
+            "  -> "
+            f"{product['title']}"
+        )
 
     print(
         f"Database size: "
