@@ -28,7 +28,7 @@
     "is_limited": true,
     "edition_type": "limited",
     "is_preorder": true,
-    "last_seen": "2026-09-04T00:55:32.901252+00:00",
+    "last_seen": "2026-09-04T01:24:57.764562+00:00",
     "currently_available": true,
     "first_seen": "2026-08-10T14:47:59.991006+00:00",
     "preorder_first_seen": "2026-08-10T14:47:59.991006+00:00",
@@ -64,7 +64,7 @@
     "is_limited": true,
     "edition_type": "limited",
     "is_preorder": true,
-    "last_seen": "2026-09-04T00:55:32.933623+00:00",
+    "last_seen": "2026-09-04T01:24:57.291380+00:00",
     "currently_available": true,
     "first_seen": "2026-08-10T14:47:59.991006+00:00",
     "preorder_first_seen": "2026-08-10T14:47:59.991006+00:00",
@@ -244,7 +244,7 @@
     "is_limited": true,
     "edition_type": "limited",
     "is_preorder": true,
-    "last_seen": "2026-09-04T00:55:32.673159+00:00",
+    "last_seen": "2026-09-04T01:24:57.223158+00:00",
     "currently_available": true,
     "first_seen": "2026-08-14T00:03:01.583076+00:00",
     "preorder_first_seen": "2026-08-14T00:03:01.583076+00:00",
@@ -662,7 +662,7 @@
     "currently_available": true,
     "first_seen": "2026-08-31T11:52:54.518346+00:00",
     "preorder_first_seen": "2026-08-31T11:52:54.518346+00:00",
-    "published": true,
+    "published": false,
     "preorder_notified": true
   },
   "iMusic:URL:https://imusic.se/movies/5051892258159/tim-burton-2026-mars-attacks-30th-anniversary-uhd-steelbook-4k-ultra-hd": {
@@ -680,7 +680,7 @@
     "currently_available": true,
     "first_seen": "2026-08-31T11:52:54.518346+00:00",
     "preorder_first_seen": "2026-08-31T11:52:54.518346+00:00",
-    "published": true,
+    "published": false,
     "preorder_notified": true
   },
   "iMusic:URL:https://imusic.se/movies/5061058621017/break-in-the-circle-2026-break-in-the-circle-4k-ultra-hd": {
@@ -698,7 +698,7 @@
     "currently_available": true,
     "first_seen": "2026-08-31T11:52:54.518346+00:00",
     "preorder_first_seen": "2026-08-31T11:52:54.518346+00:00",
-    "published": true,
+    "published": false,
     "preorder_notified": true
   },
   "iMusic:URL:https://imusic.se/movies/5056719202292/zach-cregger-2026-barbarian-4k-ultra-hd-bd": {
@@ -712,7 +712,7 @@
     "is_limited": true,
     "edition_type": "limited",
     "is_preorder": true,
-    "last_seen": "2026-09-04T00:55:34.164243+00:00",
+    "last_seen": "2026-09-04T01:24:58.603291+00:00",
     "currently_available": true,
     "first_seen": "2026-08-31T22:52:34.111146+00:00",
     "preorder_first_seen": "2026-08-31T22:52:34.111146+00:00",
@@ -735,6 +735,24 @@
     "first_seen": "2026-09-03T18:31:55.933304+00:00",
     "preorder_first_seen": "2026-09-03T18:31:55.933304+00:00",
     "published": false,
+    "preorder_notified": true
+  },
+  "iMusic:URL:https://imusic.se/movies/5061088922801/rob-cohen-2026-fast-and-furious-1-the-fast-and-the-furious-4k-ultra-hd": {
+    "source": "iMusic",
+    "title": "Rob Cohen · Fast and Furious 1 - The Fast And The Furious (4K Ultra HD) [Limited Steelbook edition] (2026)",
+    "url": "https://imusic.se/movies/5061088922801/rob-cohen-2026-fast-and-furious-1-the-fast-and-the-furious-4k-ultra-hd",
+    "ean": "",
+    "release_date": "2026-09-07",
+    "price": "",
+    "is_4k": true,
+    "is_limited": true,
+    "edition_type": "limited",
+    "is_preorder": true,
+    "last_seen": "2026-09-04T01:24:58.938148+00:00",
+    "currently_available": true,
+    "first_seen": "2026-09-04T01:25:02.438880+00:00",
+    "preorder_first_seen": "2026-09-04T01:25:02.438880+00:00",
+    "published": true,
     "preorder_notified": true
   }
 }
