@@ -64,7 +64,7 @@
     "is_limited": true,
     "edition_type": "limited",
     "is_preorder": true,
-    "last_seen": "2026-09-07T22:52:25.066812+00:00",
+    "last_seen": "2026-09-07T23:26:11.829613+00:00",
     "currently_available": true,
     "first_seen": "2026-08-10T14:47:59.991006+00:00",
     "preorder_first_seen": "2026-08-10T14:47:59.991006+00:00",
@@ -82,7 +82,7 @@
     "is_limited": true,
     "edition_type": "limited",
     "is_preorder": true,
-    "last_seen": "2026-09-07T22:52:24.840854+00:00",
+    "last_seen": "2026-09-07T23:26:11.736137+00:00",
     "currently_available": true,
     "first_seen": "2026-08-10T14:47:59.991006+00:00",
     "preorder_first_seen": "2026-08-10T14:47:59.991006+00:00",
@@ -244,7 +244,7 @@
     "is_limited": true,
     "edition_type": "limited",
     "is_preorder": true,
-    "last_seen": "2026-09-07T22:52:24.014144+00:00",
+    "last_seen": "2026-09-07T23:26:11.093417+00:00",
     "currently_available": true,
     "first_seen": "2026-08-14T00:03:01.583076+00:00",
     "preorder_first_seen": "2026-08-14T00:03:01.583076+00:00",
@@ -716,7 +716,7 @@
     "currently_available": true,
     "first_seen": "2026-08-31T22:52:34.111146+00:00",
     "preorder_first_seen": "2026-08-31T22:52:34.111146+00:00",
-    "published": true,
+    "published": false,
     "preorder_notified": true
   },
   "iMusic:URL:https://imusic.se/movies/5027035030661/rob-reiner-2026-misery-4k-ultra-hd": {
@@ -788,7 +788,7 @@
     "currently_available": true,
     "first_seen": "2026-09-07T22:52:30.192960+00:00",
     "preorder_first_seen": "2026-09-07T22:52:30.192960+00:00",
-    "published": true,
+    "published": false,
     "preorder_notified": true
   }
 }
