@@ -46,7 +46,7 @@
     "is_limited": true,
     "edition_type": "limited",
     "is_preorder": true,
-    "last_seen": "2026-09-10T00:16:57.599115+00:00",
+    "last_seen": "2026-09-10T04:53:51.507436+00:00",
     "currently_available": true,
     "first_seen": "2026-08-10T14:47:59.991006+00:00",
     "preorder_first_seen": "2026-08-10T14:47:59.991006+00:00",
@@ -64,7 +64,7 @@
     "is_limited": true,
     "edition_type": "limited",
     "is_preorder": true,
-    "last_seen": "2026-09-10T00:16:56.736638+00:00",
+    "last_seen": "2026-09-10T04:53:50.563154+00:00",
     "currently_available": true,
     "first_seen": "2026-08-10T14:47:59.991006+00:00",
     "preorder_first_seen": "2026-08-10T14:47:59.991006+00:00",
@@ -244,7 +244,7 @@
     "is_limited": true,
     "edition_type": "limited",
     "is_preorder": true,
-    "last_seen": "2026-09-10T00:16:56.811480+00:00",
+    "last_seen": "2026-09-10T04:53:49.986471+00:00",
     "currently_available": true,
     "first_seen": "2026-08-14T00:03:01.583076+00:00",
     "preorder_first_seen": "2026-08-14T00:03:01.583076+00:00",
@@ -806,7 +806,7 @@
     "currently_available": true,
     "first_seen": "2026-09-08T18:33:08.989778+00:00",
     "preorder_first_seen": "2026-09-08T18:33:08.989778+00:00",
-    "published": true,
+    "published": false,
     "preorder_notified": true
   },
   "iMusic:URL:https://imusic.se/movies/0826663269871/ringo-lam-2026-city-on-fire-4k-ultra-hd": {
@@ -824,7 +824,7 @@
     "currently_available": true,
     "first_seen": "2026-09-08T18:33:08.989778+00:00",
     "preorder_first_seen": "2026-09-08T18:33:08.989778+00:00",
-    "published": true,
+    "published": false,
     "preorder_notified": true
   },
   "iMusic:URL:https://imusic.se/movies/5027035030265/mortal-kombat-kollection-2026-mortal-kombat-kollection-4k-ultra-hd": {
@@ -838,7 +838,7 @@
     "is_limited": true,
     "edition_type": "limited",
     "is_preorder": true,
-    "last_seen": "2026-09-10T00:16:57.449926+00:00",
+    "last_seen": "2026-09-10T04:53:51.550968+00:00",
     "currently_available": true,
     "first_seen": "2026-09-09T15:30:09.311833+00:00",
     "preorder_first_seen": "2026-09-09T15:30:09.311833+00:00",
